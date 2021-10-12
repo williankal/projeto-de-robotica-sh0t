@@ -30,4 +30,8 @@ Para executar:
 
 Para habilitar o controle da garra executar:
 
-	roslaunch mybot_description mybot_control2.launch 	
+	roslaunch mybot_description mybot_control2.launch 
+
+Para rodar o script princiap:
+
+	rosrun projeto-mwrg projeto.py
