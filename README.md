@@ -32,6 +32,10 @@ Para habilitar o controle da garra executar:
 
 	roslaunch mybot_description mybot_control2.launch 
 
-Para rodar o script princiap:
+Para rodar o script principal:
 
 	rosrun projeto-mwrg projeto.py
+	
+Visite o enunciado abaixo do projeto:
+
+	https://github.com/Insper/robot21.2/blob/main/projeto/projeto.md
