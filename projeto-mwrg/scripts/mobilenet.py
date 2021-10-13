@@ -18,7 +18,7 @@ scripts = os.path.join(path,  "scripts")
 
 proto = os.path.join(scripts,"MobileNetSSD_deploy.prototxt.txt")
 model = os.path.join(scripts, "MobileNetSSD_deploy.caffemodel")
-confianca = 0.2
+confianca = 0.5
 
 
 # initialize the list of class labels MobileNet SSD was trained to
