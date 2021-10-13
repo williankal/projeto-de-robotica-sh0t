@@ -78,6 +78,37 @@ def roda_todo_frame(imagem):
     except CvBridgeError as e:
         print('ex', e)
 
+"""
+def processa_imagem(frame):
+
+    img = frame.copy()
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+
+
+    hsv1 = np.array([20, 100, 150])
+    hsv2 = np.array([35, 255, 255])
+
+    mask = cv2.inRange(hsv, hsv1, hsv2)
+
+    mask = cv2.morphologyEx(mask,cv2.MORPH_CLOSE,np.ones((5, 5)))
+
+    contornos, arvore = cv2.findContours(mask.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+    X = []
+    Y = []
+
+    for contorno in contornos:
+        M = cv2.moments(contorno)
+        try:
+            cX = int(M["m10"] / M["m00"])
+            cY = int(M["m01"] / M["m00"])
+            point = (int(cX), int(cY))
+            crosshair(img_contornos, point, 15, (0, 0, 255))
+            X.append(int(cX))
+            Y.append(int(cY))
+
+
+"""
 
 if __name__=="__main__":
     rospy.init_node("cor")
