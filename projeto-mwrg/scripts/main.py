@@ -45,8 +45,11 @@ direita = Twist(Vector3(0.05,0,0), Vector3(0,0,0.2))
 esquerda = Twist(Vector3(0.05,0,0), Vector3(0,0,-0.2))
 zero = Twist(Vector3(0,0,0), Vector3(0,0,0))
 
-contornosTeste = None
+contornosTeste = []
+contornos = []
 larguraTela = 640
+X = None
+Y = None
 
 
 
@@ -77,61 +80,70 @@ def centralizaPista(angulo):
     
     return None
 
-def centralizaPista2(contornos):
+def centralizaPista2(cX,Y):
 
     global direita
     global esquerda
     global frente
     global larguraTela
+    global X 
 
     foco = None
     areaAmarela = 0
-    cX = None
-    cY = None 
-    
-    if contornos is not None: 
-        for contorno in contornos:
-            area = cv2.contourArea(contorno)
-            if area > areaAmarela:
-                areaAmalera = area
-                foco = contorno
+    X = cX
 
-            M = cv2.moments(foco)
+    if X != None:
 
-            try:
-                cX = int(M["m10"] / M["m00"])
-                cY = int(M["m01"] / M["m00"])
+        if (larguraTela/2 - 30) < X < (larguraTela/2 + 30):
+            velocidade_saida.publish(frente)
 
-                
+        elif (larguraTela/2 - 30) > X:
+            velocidade_saida.publish(direita)
             
-            except: 
-                pass
-    
-        if cX != None:
-
-            if (larguraTela/2 - 30) < cX < (larguraTela/2 + 30):
-                velocidade_saida.publish(frente)
-
-            elif (larguraTela/2 - 30) > cX:
-                velocidade_saida.publish(direita)
-            
-            elif (larguraTela/2 + 30) < cX:
-                velocidade_saida.publish(esquerda)
+        elif (larguraTela/2 + 30) < X:
+            velocidade_saida.publish(esquerda)
 
         else: 
             default = Twist(Vector3(0,0,0), Vector3(0,0,-0.2))
             velocidade_saida.publish(default)
             print("Não recebeu cX")
+
+     
+    #if contornos is not None: 
+    #    for contorno in contornos:
+    #        area = cv2.contourArea(contorno)
+    #        if area > areaAmarela:
+    #            areaAmalera = area
+    #            foco = contorno
+
+    #    M = cv2.moments(foco)
+
+    #    try:
+    #        cX = int(M["m10"] / M["m00"])
+    #        cY = int(M["m01"] / M["m00"])
+
+                
+            
+    #    except: 
+    #        pass
     
-    return None
+    #   if cX != None:
 
+    #        if (larguraTela/2 - 30) < cX < (larguraTela/2 + 30):
+    #            velocidade_saida.publish(frente)
 
+    #       elif (larguraTela/2 - 30) > cX:
+    #            velocidade_saida.publish(direita)
+            
+    #        elif (larguraTela/2 + 30) < cX:
+    #            velocidade_saida.publish(esquerda)
 
-        
+    #    else: 
+    #        default = Twist(Vector3(0,0,0), Vector3(0,0,-0.2))
+    #        velocidade_saida.publish(default)
+    #        print("Não recebeu cX")
 
-
-
-
+       
 
 def roda_todo_frame(imagem):
     global cv_image
@@ -156,13 +168,12 @@ def roda_todo_frame(imagem):
         
             # print(r) - print feito para documentar e entender
             # o resultado            
-        imagemMain, angulo, contornos = modulo_visao.processa_imagem(temp_image)
+        imagemMain, angulo, contornos, cX, cY = modulo_visao.processa_imagem(temp_image)
         """
         Teste 163,164
         """
         maskTeste = modulo_visao.segmenta_linha_amarela(temp_image)
         contornosTeste = modulo_visao.encontrar_contornos(maskTeste)
-        print("OLHA AQUII = ", contornosTeste)
 
         shape = temp_image.shape
         print(shape)
@@ -200,7 +211,9 @@ if __name__=="__main__":
         while not rospy.is_shutdown():
             for r in resultados:
                 print(r)
-            centralizaPista2(contornosTeste)
+            centralizaPista2(cX,cY)
+            #centralizaPista2(contornos)
+            #centralizaPista(angulo)
             rospy.sleep(0.1)
 
     except rospy.ROSInterruptException:

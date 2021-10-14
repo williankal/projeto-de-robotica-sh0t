@@ -147,4 +147,4 @@ def processa_imagem(frame):
         angulo = calcular_angulo_com_vertical(img,lm)
         print("Angulo = %s"%angulo)
 
-    return img, angulo, contornos
+    return img, angulo, contornos, X, Y
