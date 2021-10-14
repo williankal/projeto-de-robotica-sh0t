@@ -72,7 +72,6 @@ def crosshair(img, point, size, color):
     cv2.line(img,(x,y - size),(x, y + size),color,5)
 
 def processa(frame):
-    '''Use esta funcao para basear o processamento do seu robo'''
 
     img, resultados = mnet.detect(frame)
 
@@ -80,13 +79,14 @@ def processa(frame):
 
     return centro, img, resultados
 
-def processa_imagem(frame):
+def segmenta_linha_amarela(bgr):
+    """
+    recebe uma imagem bgr e retorna os segmentos amarelos
 
-    img = frame.copy()
-    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    img_contornos = frame.copy()
-
-
+    """
+    img = bgr.copy()
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    
     hsv1 = np.array([20, 150, 150])
     hsv2 = np.array([30, 255, 255])
 
@@ -94,8 +94,17 @@ def processa_imagem(frame):
 
     mask = cv2.morphologyEx(mask,cv2.MORPH_CLOSE,np.ones((5, 5)))
 
+    return mask
+
+def encontrar_contornos(mask):
+    """Não mude ou renomeie esta função
+        deve receber uma imagem preta e branca os contornos encontrados
+    """
     contornos, arvore = cv2.findContours(mask.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    cv2.drawContours(img_contornos, contornos, -1, [0, 0, 255], 2)
+
+    return contornos
+
+def encontrar_centro_dos_contornos(img, contornos):
 
     X = []
     Y = []
@@ -106,17 +115,36 @@ def processa_imagem(frame):
             cX = int(M["m10"] / M["m00"])
             cY = int(M["m01"] / M["m00"])
             point = (int(cX), int(cY))
-            crosshair(img_contornos, point, 15, (0, 0, 255))
+            crosshair(img, point, 15, (0, 0, 255))
             X.append(int(cX))
             Y.append(int(cY))
         except:
             pass
+    
+    return img, X, Y
+
+def processa_imagem(frame):
+
+    img = frame.copy()
+    img_contornos = frame.copy()
+
+    mask = segmenta_linha_amarela(img)
+    contornos = encontrar_contornos(mask)
+
+    cv2.drawContours(img_contornos, contornos, -1, [0, 0, 255], 2)
+
+    X = []
+    Y = []
+
+    img_contorno, X, Y = encontrar_centro_dos_contornos(img_contornos, contornos)
     
     if X:
         ## Regressão pelo centro
         X = np.array(X)
         Y = np.array(Y)
         img, lm = regressao_por_centro(img, X,Y)
-        print("Angulo = %s"%calcular_angulo_com_vertical(img, lm))
 
-    return img
+        angulo = calcular_angulo_com_vertical(img,lm)
+        print("Angulo = %s"%angulo)
+
+    return img, angulo, contornos
