@@ -15,7 +15,8 @@ import numpy as np
 import math
 import cv2
 import time
-from sensor_msgs.msg import Image, CompressedImage, LaserScan, String
+from sensor_msgs.msg import Image, CompressedImage, LaserScan
+from std_msgs.msg import String
 from geometry_msgs.msg import Twist
 from cv_bridge import CvBridge, CvBridgeError
 
@@ -32,7 +33,8 @@ class Follower:
         self.laser_subscriber = rospy.Subscriber('/scan',
                                                  LaserScan, 
 			                                    self.laser_callback)
-        self.imagem_subscriber = rospy.Subscriber('/image.py', String, self.control)
+                                                
+        self.imagem_subscriber = rospy.Subscriber('/image', String, self.control)
         
         self.twist = Twist()
         self.laser_msg = LaserScan()
