@@ -218,7 +218,7 @@ if __name__=="__main__":
         while not rospy.is_shutdown():
             for r in resultados:
                 print(r)
-            centralizaPista2(maskTeste)
+            #centralizaPista2(maskTeste)
             #centralizaPista(angulo)
             #centralizaPista3(oi,alo)
             rospy.sleep(0.1)
