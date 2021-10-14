@@ -148,3 +148,24 @@ def processa_imagem(frame):
         print("Angulo = %s"%angulo)
 
     return img, angulo, contornos, X, Y
+
+def centro_maior_contorno(mask):
+
+    ret, thresh = cv2.threshold(mask,200, 255, cv2.THRESH_BINARY)
+    contours,_ = cv2.findContours(thresh, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+
+    
+    if len(contours) > 0:
+        c = max(contours, key=cv2.contourArea)
+        M = cv2.moments(c)
+
+        try: 
+        #encontrando o centro do maior contorno
+            cx = int(M['m10']/M['m00'])
+            cy = int(M['m01']/M['m00'])
+            
+            return cx, cy
+
+        except:
+            pass
+

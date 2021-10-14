@@ -50,6 +50,9 @@ contornos = []
 larguraTela = 640
 X = None
 Y = None
+maskTeste = None
+oi = None
+alo = None
 
 
 
@@ -80,70 +83,69 @@ def centralizaPista(angulo):
     
     return None
 
-def centralizaPista2(cX,Y):
+def centralizaPista2(mask):
 
     global direita
     global esquerda
     global frente
     global larguraTela
-    global X 
 
-    foco = None
-    areaAmarela = 0
-    X = cX
+    ret, thresh = cv2.threshold(mask,200, 255, cv2.THRESH_BINARY)
+    contours,_ = cv2.findContours(thresh, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
 
-    if X != None:
+    
+    if len(contours) > 0:
+        c = max(contours, key=cv2.contourArea)
+        M = cv2.moments(c)
 
-        if (larguraTela/2 - 30) < X < (larguraTela/2 + 30):
-            velocidade_saida.publish(frente)
+        try: 
+        #encontrando o centro do maior contorno
+            cx = int(M['m10']/M['m00'])
+            cy = int(M['m01']/M['m00'])
 
-        elif (larguraTela/2 - 30) > X:
-            velocidade_saida.publish(direita)
+
+            if (larguraTela/2 - 30) < cx < (larguraTela/2 + 30):
+                velocidade_saida.publish(frente)
+
+            elif (larguraTela/2 - 30) > cx:
+                velocidade_saida.publish(direita)
             
-        elif (larguraTela/2 + 30) < X:
-            velocidade_saida.publish(esquerda)
+            elif (larguraTela/2 + 30) < cx:
+                velocidade_saida.publish(esquerda)
+
+        except:
+            pass
 
         else: 
             default = Twist(Vector3(0,0,0), Vector3(0,0,-0.2))
             velocidade_saida.publish(default)
             print("Não recebeu cX")
 
-     
-    #if contornos is not None: 
-    #    for contorno in contornos:
-    #        area = cv2.contourArea(contorno)
-    #        if area > areaAmarela:
-    #            areaAmalera = area
-    #            foco = contorno
 
-    #    M = cv2.moments(foco)
+def centralizaPista3(cX3,cY3):
 
-    #    try:
-    #        cX = int(M["m10"] / M["m00"])
-    #        cY = int(M["m01"] / M["m00"])
-
-                
-            
-    #    except: 
-    #        pass
+    global direita
+    global esquerda
+    global frente
+    global larguraTela
     
-    #   if cX != None:
+    print("OLHA AQUI O CX= ",cX3)
 
-    #        if (larguraTela/2 - 30) < cX < (larguraTela/2 + 30):
-    #            velocidade_saida.publish(frente)
+    if cX3 is not None:
+        
+        if (larguraTela/2 - 30) < cX3 < (larguraTela/2 + 30):
+            velocidade_saida.publish(frente)
 
-    #       elif (larguraTela/2 - 30) > cX:
-    #            velocidade_saida.publish(direita)
+        elif (larguraTela/2 - 30) > cX3:
+            velocidade_saida.publish(esquerda)
             
-    #        elif (larguraTela/2 + 30) < cX:
-    #            velocidade_saida.publish(esquerda)
+        elif (larguraTela/2 + 30) < cX3:
+            velocidade_saida.publish(direita)
 
-    #    else: 
-    #        default = Twist(Vector3(0,0,0), Vector3(0,0,-0.2))
-    #        velocidade_saida.publish(default)
-    #        print("Não recebeu cX")
-
-       
+        else: 
+            default = Twist(Vector3(0,0,0), Vector3(0,0,-0.2))
+            velocidade_saida.publish(default)
+            print("Sem centro")
 
 def roda_todo_frame(imagem):
     global cv_image
@@ -169,11 +171,14 @@ def roda_todo_frame(imagem):
             # print(r) - print feito para documentar e entender
             # o resultado            
         imagemMain, angulo, contornos, cX, cY = modulo_visao.processa_imagem(temp_image)
+
         """
         Teste 163,164
         """
         maskTeste = modulo_visao.segmenta_linha_amarela(temp_image)
         contornosTeste = modulo_visao.encontrar_contornos(maskTeste)
+        oi, alo = modulo_visao.centro_maior_contorno(maskTeste)
+        
 
         shape = temp_image.shape
         print(shape)
@@ -185,6 +190,8 @@ def roda_todo_frame(imagem):
         # Desnecessário - Hough e MobileNet já abrem janelas
         cv_image = saida_net.copy()
         cv2.imshow("cv_image", cv_image)
+        cv2.imshow("Linhas amarelas", maskTeste)
+
         cv2.waitKey(1)
     except CvBridgeError as e:
         print('ex', e)
@@ -211,9 +218,9 @@ if __name__=="__main__":
         while not rospy.is_shutdown():
             for r in resultados:
                 print(r)
-            centralizaPista2(cX,cY)
-            #centralizaPista2(contornos)
+            centralizaPista2(maskTeste)
             #centralizaPista(angulo)
+            #centralizaPista3(oi,alo)
             rospy.sleep(0.1)
 
     except rospy.ROSInterruptException:
