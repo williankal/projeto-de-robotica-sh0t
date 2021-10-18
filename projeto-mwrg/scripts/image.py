@@ -23,9 +23,10 @@ class Image_converter:
                                             self.image_callback, 
                                             queue_size=4, 
                                             buff_size = 2**24)
-        self.publica_cx = rospy.Publisher('cx', String, queue_size=10)
+        self.publica_dif = rospy.Publisher('/dif', String, queue_size=10)
         self.cx = -1
         self.cy = -1
+        self.dif = -1
 
 
     def image_callback(self, msg):
@@ -51,11 +52,14 @@ class Image_converter:
             if M['m00'] > 0:
                 self.cx = int(M['m10']/M['m00'])
                 self.cy = int(M['m01']/M['m00'])
-                cv2.circle(cv_image, (self.cx, self.cy), 10, (0,0,255), -1)
+                cv2.circle(cv_image, (self.cx, self.cy), 10, (0,0,255), -1)  
+                
+            self.dif = self.cx - self.w/2
 
-            self.publica_cx.publish(str(self.cx))
+            self.publica_dif.publish(str(self.dif))
             cv2.imshow("window", cv_image)
             cv2.waitKey(1)
+
         except CvBridgeError as e:
             print('ex', e)
     
