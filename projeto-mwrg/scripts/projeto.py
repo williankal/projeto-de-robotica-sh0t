@@ -51,7 +51,7 @@ class Follower:
         
         #publica velocidade
         self.cmd_vel_pub.publish(self.twist)
-        rospy.loginfo("linear: %f angular: %f", self.twist.linear.x, self.twist.angular.z)
+        #rospy.loginfo("linear: %f angular: %f", self.twist.linear.x, self.twist.angular.z)
         self.rate.sleep()
     
     

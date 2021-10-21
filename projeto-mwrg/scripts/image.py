@@ -36,22 +36,37 @@ class Image_converter:
             hsv = cv2.cvtColor(cv_image, cv2.COLOR_BGR2HSV)
             gray = cv2.cvtColor(cv_image, cv2.COLOR_BGR2GRAY)
 
+            # Definindo campo de visão do robô
+            h, w, d = cv_image.shape
+            search_top = 3*h//4
+            search_bot = 3*h//4 + 20
+
             # Definindo configurações do Aruco
             aruco_dict  = aruco.getPredefinedDictionary(aruco.DICT_6X6_250)
-            corners, ids, rejectedImgPoints = aruco.detectMarkers(esquerdag, aruco_dict)
+            corners, ids, rejectedImgPoints = aruco.detectMarkers(gray, aruco_dict)
 
-            
             # Definindo para seguir linha amarela
             lower_yellow = np.array([22, 50, 50],dtype=np.uint8)
             upper_yellow = np.array([36, 255, 255],dtype=np.uint8)
             mask = cv2.inRange(hsv, lower_yellow, upper_yellow)
-
-            h, w, d = cv_image.shape
-            search_top = 3*h//4
-            search_bot = 3*h//4 + 20
             mask[0:search_top, 0:w] = 0
             mask[search_bot:h, 0:w] = 0
 
+            # Alterando as imagens para o caso do primeiro aruco (frontal)
+            if ids is not None and len(ids)>0:
+                #print(ids)
+                if self.proxesquerda and ids[0] == [200]:
+                    # bloqueia a parte direita da imagem (vira a esquerda)
+                    mask[search_top:search_bot, 3*w//5:w] = 0
+                if not self.proxesquerda and ids[0] == [200]:
+                    # bloqueia a parte esquerda da imagem (vira a direita)
+                    mask[search_top:search_bot, 0:3*w//5] = 0
+                if ids[0] == [100]:
+                    self.proxesquerda = False
+                    mask[search_top:search_bot, 3*w//5:w] = 0
+
+            print(self.proxesquerda)
+            cv2.imshow('hi', mask)
             self.w = w
             self.h = h
 
