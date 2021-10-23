@@ -18,19 +18,23 @@ def mascara_creeper(self, cor, img):
     hsv = img.copy()
     try:
         if cor == "blue":
-            cor1 = np.array([80, 50, 50],dtype=np.uint8)
-            cor2 = np.array([100, 255, 255],dtype=np.uint8)
+            cor1 = np.array([85, 100, 100],dtype=np.uint8)
+            cor2 = np.array([105, 255, 255],dtype=np.uint8)
             mask = cv2.inRange(hsv, cor1, cor2)
 
         if cor == "green":
-            cor1 = np.array([45, 50, 50],dtype=np.uint8)
-            cor2 = np.array([60, 255, 255],dtype=np.uint8)
+            cor1 = np.array([45, 75, 200],dtype=np.uint8)
+            cor2 = np.array([75, 255, 255],dtype=np.uint8)
             mask = cv2.inRange(hsv, cor1, cor2)
 
         if cor == "orange":
-            cor1 = np.array([170, 50, 50],dtype=np.uint8)
+            cor1 = np.array([0, 150, 150],dtype=np.uint8)
             cor2 = np.array([10, 255, 255],dtype=np.uint8)
-            mask = cv2.inRange(hsv, cor1, cor2)
+            cor3 = np.array([170, 150, 150],dtype=np.uint8)
+            cor4 = np.array([180, 255, 255],dtype=np.uint8)
+            mask1 = cv2.inRange(hsv, cor1, cor2)
+            mask2 = cv2.inRange(hsv, cor3, cor4)
+            mask = cv2.bitwise_or(mask1,mask2)
         return mask           
     except: 
         pass
