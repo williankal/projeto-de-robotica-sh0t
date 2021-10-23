@@ -14,7 +14,27 @@ from std_msgs.msg import String
 from geometry_msgs.msg import Twist
 from cv_bridge import CvBridge, CvBridgeError
 
-#print(sys.argv)
+def mascara_creeper(self, cor, img):
+    hsv = img.copy()
+    try:
+        if cor == "blue":
+            cor1 = np.array([80, 50, 50],dtype=np.uint8)
+            cor2 = np.array([100, 255, 255],dtype=np.uint8)
+            mask = cv2.inRange(hsv, cor1, cor2)
+
+        if cor == "green":
+            cor1 = np.array([45, 50, 50],dtype=np.uint8)
+            cor2 = np.array([60, 255, 255],dtype=np.uint8)
+            mask = cv2.inRange(hsv, cor1, cor2)
+
+        if cor == "orange":
+            cor1 = np.array([170, 50, 50],dtype=np.uint8)
+            cor2 = np.array([10, 255, 255],dtype=np.uint8)
+            mask = cv2.inRange(hsv, cor1, cor2)
+        return mask           
+    except: 
+        pass
+
 class Image_converter:
 
     def __init__(self):
@@ -30,6 +50,7 @@ class Image_converter:
         self.cy = -1
         self.dif = -1
         self.proxdireita = False
+        self.cordocreeper = sys.argv[1]
 
     def image_callback(self, msg):
         
@@ -73,7 +94,10 @@ class Image_converter:
             if M['m00'] > 0:
                 self.cx = int(M['m10']/M['m00'])
                 self.cy = int(M['m01']/M['m00'])
-                cv2.circle(cv_image, (self.cx, self.cy), 10, (0,0,255), -1)  
+                cv2.circle(cv_image, (self.cx, self.cy), 10, (0,0,255), -1)
+
+            # Definindo máscara para creepers a partir dos args
+            mask_creeper = mascara_creeper(self, sys.argv[1], hsv)
             
             #Atualizando atributos e publicando dif
             self.w = w
@@ -82,42 +106,12 @@ class Image_converter:
             self.publica_dif.publish(str(self.dif))
 
             cv2.imshow('mask', mask)
-            cv2.imshow("window", cv_image)
+            cv2.imshow('cv_image', cv_image)
+            cv2.imshow('mask_creeper', mask_creeper)
             cv2.waitKey(1)
 
         except CvBridgeError as e:
             print('ex', e)
-    
-    def centraliza_creeper(self, cor):
-        try:
-            if cor == "blue":
-                cv_image = self.bridge.compressed_imgmsg_to_cv2(msg,desired_encoding='bgr8')
-                hsv = cv2.cvtColor(cv_image, cv2.COLOR_BGR2HSV)
-                cor1 = np.array([86, 50, 50],dtype=np.uint8)
-                cor2 = np.array([96, 255, 255],dtype=np.uint8)
-                mask = cv2.inRange(hsv, cor1, cor2)
-
-            if cor == "green":
-                cv_image = self.bridge.compressed_imgmsg_to_cv2(msg,desired_encoding='bgr8')
-                hsv = cv2.cvtColor(cv_image, cv2.COLOR_BGR2HSV)
-                cor1 = np.array([50, 50, 50],dtype=np.uint8)
-                cor2 = np.array([60, 255, 255],dtype=np.uint8)
-                mask = cv2.inRange(hsv, cor1, cor2)
-
-            if cor == "orange":
-                cv_image = self.bridge.compressed_imgmsg_to_cv2(msg,desired_encoding='bgr8')
-                hsv = cv2.cvtColor(cv_image, cv2.COLOR_BGR2HSV)
-                cor1 = np.array([170, 50, 50],dtype=np.uint8)
-                cor2 = np.array([10, 255, 255],dtype=np.uint8)
-                mask = cv2.inRange(hsv, cor1, cor2)            
-
-            M = cv2.moments(mask)
-
-            if M['m00'] > 0:
-                self.cx = int(M['m10']/M['m00'])
-                self.cy = int(M['m01']/M['m00'])
-        except: 
-            pass
 
 def main(args):
   ic = Image_converter()

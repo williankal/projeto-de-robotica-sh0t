@@ -87,7 +87,7 @@ if __name__== "__main__":
         print(f'Deu volta> {deuVolta}')
         if x>0.5 and y<1:
             deuVolta = True
-        if deuVolta == True and x>-0.15 and x<0.15 and y>-0.15 and y<0.15:
+        if deuVolta == True and x>-0.15 and x<0.15 and y>-0.05 and y<0.05:
             controller.control_stop()
         controller.control_go()
         
