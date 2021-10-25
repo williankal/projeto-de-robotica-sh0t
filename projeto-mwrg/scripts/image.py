@@ -14,7 +14,9 @@ from std_msgs.msg import String
 from geometry_msgs.msg import Twist
 from cv_bridge import CvBridge, CvBridgeError
 
-def mascara_creeper(self, cor, img):
+print(sys.argv)
+
+def mascara_creeper(cor, img):
     hsv = img.copy()
     try:
         if cor == "blue":
@@ -101,7 +103,7 @@ class Image_converter:
                 cv2.circle(cv_image, (self.cx, self.cy), 10, (0,0,255), -1)
 
             # Definindo máscara para creepers a partir dos args
-            mask_creeper = mascara_creeper(self, sys.argv[1], hsv)
+            mask_creeper = mascara_creeper(sys.argv[1], hsv)
             
             #Atualizando atributos e publicando dif
             self.w = w
