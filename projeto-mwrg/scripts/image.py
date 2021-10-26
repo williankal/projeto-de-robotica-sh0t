@@ -9,9 +9,8 @@ import math
 import cv2
 import cv2.aruco as aruco
 import time
-from sensor_msgs.msg import Image, CompressedImage, LaserScan
+from sensor_msgs.msg import CompressedImage
 from std_msgs.msg import String
-from geometry_msgs.msg import Twist
 from cv_bridge import CvBridge, CvBridgeError
 
 print(sys.argv)
@@ -20,24 +19,24 @@ def mascara_creeper(cor, img):
     hsv = img.copy()
     try:
         if cor == "blue":
-            cor1 = np.array([85, 100, 100],dtype=np.uint8)
-            cor2 = np.array([105, 255, 255],dtype=np.uint8)
+            cor1 = np.array([90, 140, 140],dtype=np.uint8)
+            cor2 = np.array([100, 255, 255],dtype=np.uint8)
             mask = cv2.inRange(hsv, cor1, cor2)
 
         if cor == "green":
-            cor1 = np.array([45, 75, 200],dtype=np.uint8)
-            cor2 = np.array([75, 255, 255],dtype=np.uint8)
+            cor1 = np.array([55, 150, 200],dtype=np.uint8)
+            cor2 = np.array([65, 255, 255],dtype=np.uint8)
             mask = cv2.inRange(hsv, cor1, cor2)
 
         if cor == "orange":
-            cor1 = np.array([0, 150, 150],dtype=np.uint8)
-            cor2 = np.array([10, 255, 255],dtype=np.uint8)
-            cor3 = np.array([170, 150, 150],dtype=np.uint8)
+            cor1 = np.array([0, 200, 200],dtype=np.uint8)
+            cor2 = np.array([4, 255, 255],dtype=np.uint8)
+            cor3 = np.array([177, 200, 200],dtype=np.uint8)
             cor4 = np.array([180, 255, 255],dtype=np.uint8)
             mask1 = cv2.inRange(hsv, cor1, cor2)
             mask2 = cv2.inRange(hsv, cor3, cor4)
             mask = cv2.bitwise_or(mask1,mask2)
-        return mask           
+        return mask
     except: 
         pass
 
@@ -74,7 +73,7 @@ class Image_converter:
             # Definindo configurações do Aruco
             aruco_dict  = aruco.getPredefinedDictionary(aruco.DICT_6X6_250)
             corners, ids, rejectedImgPoints = aruco.detectMarkers(gray, aruco_dict)
-
+            print(ids)
             # Definindo para seguir linha amarela
             lower_yellow = np.array([22, 50, 50],dtype=np.uint8)
             upper_yellow = np.array([36, 255, 255],dtype=np.uint8)
@@ -111,10 +110,10 @@ class Image_converter:
             self.dif = self.cx - self.w/2
             self.publica_dif.publish(str(self.dif))
 
-            cv2.imshow('mask', mask)
-            cv2.imshow('cv_image', cv_image)
-            cv2.imshow('mask_creeper', mask_creeper)
-            cv2.waitKey(1)
+            # cv2.imshow('mask', mask)
+            # cv2.imshow('cv_image', cv_image)
+            # cv2.imshow('mask_creeper', mask_creeper)
+            # cv2.waitKey(1)
 
         except CvBridgeError as e:
             print('ex', e)
