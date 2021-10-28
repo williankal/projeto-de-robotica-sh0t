@@ -75,6 +75,45 @@ class Controller:
         self.rate.sleep()
         rospy.sleep(5)
     
+    def aproximando_creeper(self):
+        self.twist.linear.x = 0.1
+        self.twist.angular.z = -self.difCreeper / 100
+        self.cmd_vel_pub.publish(self.twist)
+
+"""
+class MaquinaEstados:
+
+    #subscribe aruco, areaCreeper, difCreeper, aruco_id == sys.argv9
+    def __init__(self):
+        self.estado = "ANDANDO PISTA"
+
+    def controle_andando_pista(self):
+        controller.control_go()
+
+        if areaCreeper >= 1000:
+            return "PROCURANDO ID"
+
+    def controle_procurando_id(self):
+        controller.aproximando_creeper()
+        if get_laser <= 0.3:
+
+            return "PEGANDO CREEPER"
+
+        if ids[0] == [aruco_id]:
+            self.estado = self.controle_pegando_creeper()
+        elif ids[0] != [aruco_id]:
+            self.estado = self.controle_retorna()
+
+        
+        
+    def processa_dados(self):
+        if self.estado == "ANDANDO PISTA":
+            self.estado = self.controle_andando_pista()
+        if self.estado == "PROCURANDO ID":
+            self.estado = self.controle_procurando_id()
+        if self.estado == "PEGANDO CREEPER":
+            self.estado = self.controle_pegando_creeper()
+"""
 # Main loop
 if __name__== "__main__":
     rospy.init_node('Controller')

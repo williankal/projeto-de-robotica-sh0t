@@ -59,6 +59,7 @@ class Image_converter:
         self.dif = -1
         self.proxdireita = False
         self.cordocreeper = sys.argv[1]
+        self.cxCreeper = -1
 
     def image_callback(self, msg):
         
@@ -104,13 +105,35 @@ class Image_converter:
                 cv2.circle(cv_image, (self.cx, self.cy), 10, (0,0,255), -1)
 
             # Definindo máscara para creepers a partir dos args
+            areaCreeper = 0
+            contornoCreeper = None
             mask_creeper = mascara_creeper(sys.argv[1], hsv)
+
+            contours, hierarchy = cv2.findContours(mask_creeper, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_NONE)
+            for contorno in contours:
+                    area = cv2.contourArea(contorno)
+                    if area > maior_area:
+                        areaCreeper = area 
+                        contornoCreeper = contorno
+            print("Area Creeper: ",areaCreeper)
+
             
             #Atualizando atributos e publicando dif
             self.w = w
             self.h = h   
             self.dif = self.cx - self.w/2
             self.publica_dif.publish(str(self.dif))
+
+            MCreeper = cv2.moments(mask_creeper)
+
+            if MCreeper['m00'] > 0:
+                self.cx = int(MCreeper['m10']/MCreeper['m00'])
+                self.cy = int(MCreeper['m01']/MCreeper['m00'])
+
+            self.w = w
+            self.h = h   
+            self.difCreeper = self.cxCreeper - self.w/2
+
 
             #cv2.imshow('mask', mask)
             #cv2.imshow('cv_image', cv_image)
@@ -192,6 +215,8 @@ class Mobile_net:
                     print(results)
         except:
             pass
+
+
 
 
 def main(args):
