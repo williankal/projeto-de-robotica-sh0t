@@ -20,6 +20,7 @@ print(sys.argv)
 
 def mascara_creeper(cor, img):
     hsv = img.copy()
+    cx_creeper = None
     try:
         if cor == "blue":
             cor1 = np.array([90, 140, 140],dtype=np.uint8)
@@ -39,7 +40,18 @@ def mascara_creeper(cor, img):
             mask1 = cv2.inRange(hsv, cor1, cor2)
             mask2 = cv2.inRange(hsv, cor3, cor4)
             mask = cv2.bitwise_or(mask1,mask2)
-        return mask
+        
+        # Achando centro de massa do creeper
+        try:
+            M = cv2.moments(mask)
+
+            if M['m00'] > 0:
+                cx_creeper = int(M['m10']/M['m00'])
+            print(cx_creeper)
+        except:
+            pass    
+
+        return mask,cx_creeper        
     except: 
         pass
 
@@ -59,7 +71,7 @@ class Image_converter:
         self.dif = -1
         self.proxdireita = False
         self.cordocreeper = sys.argv[1]
-        self.cxCreeper = -1
+        self.cx_creeper = -1
 
     def image_callback(self, msg):
         
@@ -105,40 +117,19 @@ class Image_converter:
                 cv2.circle(cv_image, (self.cx, self.cy), 10, (0,0,255), -1)
 
             # Definindo máscara para creepers a partir dos args
-            areaCreeper = 0
-            contornoCreeper = None
-            mask_creeper = mascara_creeper(sys.argv[1], hsv)
-
-            contours, hierarchy = cv2.findContours(mask_creeper, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_NONE)
-            for contorno in contours:
-                    area = cv2.contourArea(contorno)
-                    if area > maior_area:
-                        areaCreeper = area 
-                        contornoCreeper = contorno
-            print("Area Creeper: ",areaCreeper)
-
-            
+            mask_creeper, cx_creeper = mascara_creeper(sys.argv[1], hsv)
+            self.cx_creeper = cx_creeper
             #Atualizando atributos e publicando dif
+
             self.w = w
-            self.h = h   
+            self.h = h
             self.dif = self.cx - self.w/2
             self.publica_dif.publish(str(self.dif))
 
-            MCreeper = cv2.moments(mask_creeper)
-
-            if MCreeper['m00'] > 0:
-                self.cx = int(MCreeper['m10']/MCreeper['m00'])
-                self.cy = int(MCreeper['m01']/MCreeper['m00'])
-
-            self.w = w
-            self.h = h   
-            self.difCreeper = self.cxCreeper - self.w/2
-
-
-            #cv2.imshow('mask', mask)
-            #cv2.imshow('cv_image', cv_image)
-            #cv2.imshow('mask_creeper', mask_creeper)
-            # cv2.waitKey(1)
+            cv2.imshow('mask', mask)
+            cv2.imshow('cv_image', cv_image)
+            cv2.imshow('mask_creeper', mask_creeper)
+            cv2.waitKey(1)
 
         except CvBridgeError as e:
             print('ex', e)
@@ -212,7 +203,7 @@ class Mobile_net:
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, self.COLORS[idx], 2)
 
                     results.append((self.CLASSES[idx], confidence*100, (startX, startY),(endX, endY) ))
-                    print(results)
+                    #print(results)
         except:
             pass
 
