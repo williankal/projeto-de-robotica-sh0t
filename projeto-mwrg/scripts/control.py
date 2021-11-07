@@ -8,7 +8,7 @@ import cv2
 import time
 import sys
 from sensor_msgs.msg import Image, CompressedImage, LaserScan
-from std_msgs.msg import String
+from std_msgs.msg import String, Bool
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 
@@ -39,12 +39,13 @@ class MaquinaDeEstados:
         self.laser_subscriber = rospy.Subscriber('/scan', LaserScan, self.laser_callback)                   
         self.dif_subscriber = rospy.Subscriber('/dif', String, self.atualiza_dif)
         self.cx_creeper_subscriber = rospy.Subscriber('/cx_creeper', String, self.atualiza_cx_creeper)
-        
+
         #Atributos da ME
         self.twist = Twist()
         self.laser_msg = LaserScan()
-        self.dif = -1
-        self.cx_creeper = None
+        self.dif = -1 #diferença dada por image.py
+        self.cx_creeper = None # posição em x do creeper
+        self.w = 640 # comprimento lateral da tela (pixels)
         self.lastError = 0
         self.deuVolta = False
         self.estado = "SEGUE RETA"
@@ -59,7 +60,7 @@ class MaquinaDeEstados:
     
     def atualiza_dif(self, msg):
         self.dif = float(msg.data)
-    
+
     def atualiza_cx_creeper(self,msg):
         data = None
         if msg.data is not None:
@@ -70,11 +71,11 @@ class MaquinaDeEstados:
         return self.laser_msg.ranges[pos]
     
     #Estados
-    def control_segue_reta(self):
+    def segue_reta(self):
 
         estado = "SEGUE RETA"        
         #Controle P simples
-        self.twist.linear.x = 0.5
+        self.twist.linear.x = 0.4
         self.twist.angular.z = - self.dif / 100
         
         #publica velocidade
@@ -86,9 +87,30 @@ class MaquinaDeEstados:
         if self.deuVolta == True and x>-0.15 and x<0.15 and y>-0.05 and y<0.05:
             estado = "PARA"
 
+        if self.cx_creeper is not None and 512<self.cx_creeper<640:
+            estado = "FOCA CREEPER"
+
         return estado
     
-    def control_stop(self):
+    def foca_creeper(self):
+        estado = "FOCA CREEPER"
+        self.twist.linear.x = 0
+
+        if self.cx_creeper is not None:
+            #sabe-se que o tamanho da tela é 640 pixels
+            if self.cx_creeper > 320:
+                self.twist.angular.z = -0.1
+            elif self.cx_creeper <320:
+                self.twist.angular.z = 0.1
+        
+        if 
+
+        self.cmd_vel_pub.publish(self.twist)
+        self.rate.sleep()
+
+        return estado
+    
+    def stop(self):
         self.twist.linear.x = 0
         self.cmd_vel_pub.publish(self.twist)
         self.rate.sleep()
@@ -99,10 +121,13 @@ class MaquinaDeEstados:
     def control(self):
 
         if self.estado=="SEGUE RETA":
-            self.estado = self.control_segue_reta()
+            self.estado = self.segue_reta()
         
+        if self.estado=="FOCA CREEPER":
+            self.estado = self.foca_creeper()
+
         if self.estado=="PARA":
-            self.estado = self.control_stop()
+            self.estado = self.stop()
           
 if __name__== "__main__":
     rospy.init_node('Controller')
@@ -111,13 +136,6 @@ if __name__== "__main__":
 
     while not rospy.is_shutdown():
         controller.control()
-        # print("x: {} y: {};".format(round(x,2), round(y,2)))
-        # print(controller.cx_creeper)
-        # if x>0.5 and y<1:
-        #     deuVolta = True
-        # if deuVolta == True and x>-0.15 and x<0.15 and y>-0.05 and y<0.05:
-        #     controller.control_stop()
-        # controller.control_go()
         
 
         

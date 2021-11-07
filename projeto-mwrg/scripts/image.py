@@ -13,7 +13,7 @@ import time
 import argparse
 import os
 from sensor_msgs.msg import CompressedImage
-from std_msgs.msg import String
+from std_msgs.msg import String, Bool
 from cv_bridge import CvBridge, CvBridgeError
 
 print(sys.argv)
@@ -76,6 +76,7 @@ class Image_converter:
         self.proxdireita = False
         self.cordocreeper = sys.argv[1]
         self.cx_creeper = -1
+        self.creeper_saindo = False
 
     def image_callback(self, msg):
         
@@ -130,12 +131,13 @@ class Image_converter:
             self.cx_creeper = cx_creeper
             self.dif = self.cx - self.w/2
             self.publica_dif.publish(str(self.dif))
+
             if self.cx_creeper is not None:
                 self.publica_cx_creeper.publish(str(self.cx_creeper))
 
             # cv2.imshow('mask', mask)
             # cv2.imshow('cv_image', cv_image)
-            # cv2.imshow('mask_creeper', mask_creeper)
+            cv2.imshow('mask_creeper', mask_creeper)
             # cv2.waitKey(1)
 
         except CvBridgeError as e:
