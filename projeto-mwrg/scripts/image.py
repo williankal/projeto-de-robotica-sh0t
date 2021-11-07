@@ -13,13 +13,18 @@ import time
 import argparse
 import os
 from sensor_msgs.msg import CompressedImage
-from std_msgs.msg import String
+from std_msgs.msg import String, Bool
 from cv_bridge import CvBridge, CvBridgeError
 
 print(sys.argv)
 
 def mascara_creeper(cor, img):
+    """
+        Recebe: cor desejada do creeper (escolhida a partir do terminal), imagem em hsv
+        Devolve: máscara segmentando cor do creeper, centro de massa do creeper
+    """
     hsv = img.copy()
+    cx_creeper = None
     try:
         if cor == "blue":
             cor1 = np.array([90, 140, 140],dtype=np.uint8)
@@ -39,7 +44,17 @@ def mascara_creeper(cor, img):
             mask1 = cv2.inRange(hsv, cor1, cor2)
             mask2 = cv2.inRange(hsv, cor3, cor4)
             mask = cv2.bitwise_or(mask1,mask2)
-        return mask
+        
+        # Achando centro de massa do creeper
+        try:
+            M = cv2.moments(mask)
+
+            if M['m00'] > 0:
+                cx_creeper = int(M['m10']/M['m00'])
+        except:
+            pass    
+
+        return mask,cx_creeper        
     except: 
         pass
 
@@ -52,6 +67,7 @@ class Image_converter:
         self.cv_image = None
         self.image_sub = rospy.Subscriber('/camera/image/compressed', CompressedImage, self.image_callback, queue_size=4, buff_size = 2**24)
         self.publica_dif = rospy.Publisher('/dif', String, queue_size=1)
+        self.publica_cx_creeper = rospy.Publisher('/cx_creeper', String, queue_size=1)
         self.w = -1
         self.h = -1
         self.cx = -1
@@ -59,6 +75,8 @@ class Image_converter:
         self.dif = -1
         self.proxdireita = False
         self.cordocreeper = sys.argv[1]
+        self.cx_creeper = -1
+        self.creeper_saindo = False
 
     def image_callback(self, msg):
         
@@ -90,7 +108,7 @@ class Image_converter:
                     mask[search_top:search_bot, 3*w//5:w] = 0
                 elif self.proxdireita and ids[0] == [200] and aresta > 30:
                     # bloqueia a parte esquerda da imagem (vira a direita)
-                    mask[search_top:search_bot, 0:3*w//5] = 0
+                    mask[search_top:search_bot, 0:5*w//6] = 0
                 elif ids[0] == [100]:
                     mask[search_top:search_bot, 3*w//5:w] = 0
                     self.proxdireita = True
@@ -104,18 +122,25 @@ class Image_converter:
                 cv2.circle(cv_image, (self.cx, self.cy), 10, (0,0,255), -1)
 
             # Definindo máscara para creepers a partir dos args
-            mask_creeper = mascara_creeper(sys.argv[1], hsv)
-            
+            mask_creeper, cx_creeper = mascara_creeper(sys.argv[1], hsv)
+
             #Atualizando atributos e publicando dif
+
             self.w = w
-            self.h = h   
+            self.h = h
+            self.cx_creeper = cx_creeper
             self.dif = self.cx - self.w/2
             self.publica_dif.publish(str(self.dif))
 
-            #cv2.imshow('mask', mask)
-            #cv2.imshow('cv_image', cv_image)
+            if self.cx_creeper is not None:
+                self.publica_cx_creeper.publish(str(self.cx_creeper))
+
+            # cv2.imshow('mask', mask)
+            # cv2.imshow('cv_image', cv_image)
             #cv2.imshow('mask_creeper', mask_creeper)
             # cv2.waitKey(1)
+            cv2.imshow('hue', mask_creeper)
+            cv2.waitKey(1)
 
         except CvBridgeError as e:
             print('ex', e)
@@ -189,9 +214,11 @@ class Mobile_net:
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, self.COLORS[idx], 2)
 
                     results.append((self.CLASSES[idx], confidence*100, (startX, startY),(endX, endY) ))
-                    print(results)
+                    #print(results)
         except:
             pass
+
+
 
 
 def main(args):
