@@ -76,7 +76,6 @@ class Image_converter:
         self.proxdireita = False
         self.cordocreeper = sys.argv[1]
         self.cx_creeper = -1
-        self.creeper_saindo = False
 
     def image_callback(self, msg):
         
