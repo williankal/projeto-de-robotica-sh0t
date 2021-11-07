@@ -19,6 +19,10 @@ from cv_bridge import CvBridge, CvBridgeError
 print(sys.argv)
 
 def mascara_creeper(cor, img):
+    """
+        Recebe: cor desejada do creeper (escolhida a partir do terminal), imagem em hsv
+        Devolve: máscara segmentando cor do creeper, centro de massa do creeper
+    """
     hsv = img.copy()
     cx_creeper = None
     try:
@@ -47,7 +51,6 @@ def mascara_creeper(cor, img):
 
             if M['m00'] > 0:
                 cx_creeper = int(M['m10']/M['m00'])
-            print(cx_creeper)
         except:
             pass    
 
@@ -64,6 +67,7 @@ class Image_converter:
         self.cv_image = None
         self.image_sub = rospy.Subscriber('/camera/image/compressed', CompressedImage, self.image_callback, queue_size=4, buff_size = 2**24)
         self.publica_dif = rospy.Publisher('/dif', String, queue_size=1)
+        self.publica_cx_creeper = rospy.Publisher('/cx_creeper', String, queue_size=1)
         self.w = -1
         self.h = -1
         self.cx = -1
@@ -103,7 +107,7 @@ class Image_converter:
                     mask[search_top:search_bot, 3*w//5:w] = 0
                 elif self.proxdireita and ids[0] == [200] and aresta > 30:
                     # bloqueia a parte esquerda da imagem (vira a direita)
-                    mask[search_top:search_bot, 0:3*w//5] = 0
+                    mask[search_top:search_bot, 0:5*w//6] = 0
                 elif ids[0] == [100]:
                     mask[search_top:search_bot, 3*w//5:w] = 0
                     self.proxdireita = True
@@ -118,18 +122,21 @@ class Image_converter:
 
             # Definindo máscara para creepers a partir dos args
             mask_creeper, cx_creeper = mascara_creeper(sys.argv[1], hsv)
-            self.cx_creeper = cx_creeper
+
             #Atualizando atributos e publicando dif
 
             self.w = w
             self.h = h
+            self.cx_creeper = cx_creeper
             self.dif = self.cx - self.w/2
             self.publica_dif.publish(str(self.dif))
+            if self.cx_creeper is not None:
+                self.publica_cx_creeper.publish(str(self.cx_creeper))
 
-            cv2.imshow('mask', mask)
-            cv2.imshow('cv_image', cv_image)
-            cv2.imshow('mask_creeper', mask_creeper)
-            cv2.waitKey(1)
+            # cv2.imshow('mask', mask)
+            # cv2.imshow('cv_image', cv_image)
+            # cv2.imshow('mask_creeper', mask_creeper)
+            # cv2.waitKey(1)
 
         except CvBridgeError as e:
             print('ex', e)

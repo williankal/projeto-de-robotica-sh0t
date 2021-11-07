@@ -1,0 +1,2 @@
+const = "lol"
+print(const)
