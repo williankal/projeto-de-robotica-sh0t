@@ -11,6 +11,7 @@ from sensor_msgs.msg import Image, CompressedImage, LaserScan
 from std_msgs.msg import String, Bool
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
+from std_msgs.msg import Float64
 
 # Dados de Odometria
 x = -1
@@ -38,6 +39,8 @@ class MaquinaDeEstados:
         self.cmd_vel_pub = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
         self.laser_subscriber = rospy.Subscriber('/scan', LaserScan, self.laser_callback)                   
         self.dif_subscriber = rospy.Subscriber('/dif', String, self.atualiza_dif)
+        self.ombro = rospy.Publisher("/joint1_position_controller/command", Float64, queue_size=1)
+        self.garra = rospy.Publisher("/joint2_position_controller/command", Float64, queue_size=1)
         self.cx_creeper_subscriber = rospy.Subscriber('/cx_creeper', String, self.atualiza_cx_creeper)
 
         #Atributos da ME
@@ -52,12 +55,17 @@ class MaquinaDeEstados:
         self.max_vel_linear = 0.2
         self.max_vel_angular = 2.0
         self.hertz = 250
+        self.colidiu = False
         self.rate = rospy.Rate(self.hertz)
 
     #Funções de Callback
     def laser_callback(self, msg):
         laser_msg = msg.ranges
         self.laser_central = laser_msg[0]
+        if laser_msg[0] < 0.2 or laser_msg[1]< 0.2 or laser_msg[2]< 0.2 or laser_msg[3]< 0.2 or laser_msg[359] < 0.2 or laser_msg[358] < 0.2 or laser_msg[357] < 0.2:
+            self.colidiu = True
+        else:
+            self.colidiu = False
     
     def atualiza_dif(self, msg):
         self.dif = float(msg.data)
@@ -107,20 +115,49 @@ class MaquinaDeEstados:
         if centro - 10 < self.cx_creeper < centro + 10:
             estado = "SEGUE CREEPER"
 
+        if self.colidiu:
+            self.twist.linear.x = 0
+            self.twist.angular.z = 0            
+            estado = "PEGA CREEPER"
+
         self.cmd_vel_pub.publish(self.twist)
         self.rate.sleep()
 
         return estado
-    
+
+    def pega_creeper(self):
+
+        estado = "PEGA CREEPER"
+        
+        if self.laser_central < 0.185:
+            self.garra.publish(-1.0)
+            self.ombro.publish(-0.5)
+            rospy.sleep(2.0)
+            self.garra.publish(0.0) ## fecha
+            rospy.sleep(1.0)
+            self.ombro.publish(1.5) ## para cima
+
+            estado = "PARA"
+
+
+
+        return estado
+
+
+        
+
+
     def segue_creeper(self):
         estado = "SEGUE CREEPER"
         centro = self.w//2
 
         if centro - 30 < self.cx_creeper < centro + 30:
-            self.twist.linear.x = 0.2
+            self.twist.linear.x = 0.1
             self.twist.angular.z = 0
         else:
             estado = "FOCA CREEPER"
+
+        
         
         self.cmd_vel_pub.publish(self.twist)
         self.rate.sleep()
@@ -145,6 +182,9 @@ class MaquinaDeEstados:
         
         elif self.estado=="SEGUE CREEPER":
             self.estado = self.segue_creeper()
+
+        elif self.estado == "PEGA CREEPER":
+            self.estado = self.pega_creeper()
 
         elif self.estado=="PARA":
             self.estado = self.stop()
