@@ -47,7 +47,7 @@ class MaquinaDeEstados:
         self.cx_creeper = None # posição em x do creeper
         self.w = 640 # comprimento lateral da tela (pixels)
         self.lastError = 0
-        self.deuVolta = False
+        self.lado_direito = False
         self.estado = "SEGUE RETA"
         self.max_vel_linear = 0.2
         self.max_vel_angular = 2.0
@@ -76,21 +76,21 @@ class MaquinaDeEstados:
 
         estado = "SEGUE RETA"        
         #Controle P simples
-        self.twist.linear.x = 0.4
+        self.twist.linear.x = 0.5
         self.twist.angular.z = - self.dif / 100
         
         #publica velocidade
         self.cmd_vel_pub.publish(self.twist)
         
-        if x>0.5 and y<1:
-            self.deuVolta = True
+        if x>0.25:
+            self.lado_direito = True
         
-        if self.deuVolta == True and x>-0.15 and x<0.15 and y>-0.05 and y<0.05:
+        if self.lado_direito == True and x>-0.15 and x<0.15 and y>-0.05 and y<0.05:
             estado = "PARA"
 
-        if self.cx_creeper is not None and self.w*4//5<self.cx_creeper<self.w:
-            estado = "FOCA CREEPER"
-
+        if self.cx_creeper is not None:
+            if  0<self.cx_creeper<self.w//5 or self.w*4//5<self.cx_creeper<self.w:
+                estado = "FOCA CREEPER"
         return estado
     
     def foca_creeper(self):
@@ -130,13 +130,12 @@ class MaquinaDeEstados:
         self.twist.linear.x = 0
         self.cmd_vel_pub.publish(self.twist)
         self.rate.sleep()
-        rospy.sleep(5)
         return "PARA"
 
     #Controle
     def control(self):
 
-        print(self.laser_central)
+        print(self.estado)
 
         if self.estado=="SEGUE RETA":
             self.estado = self.segue_reta()
