@@ -42,7 +42,7 @@ class MaquinaDeEstados:
 
         #Atributos da ME
         self.twist = Twist()
-        self.laser_msg = LaserScan()
+        self.laser_central = 0
         self.dif = -1 #diferença dada por image.py
         self.cx_creeper = None # posição em x do creeper
         self.w = 640 # comprimento lateral da tela (pixels)
@@ -56,7 +56,8 @@ class MaquinaDeEstados:
 
     #Funções de Callback
     def laser_callback(self, msg):
-        self.laser_msg = msg
+        laser_msg = msg.ranges
+        self.laser_central = laser_msg[0]
     
     def atualiza_dif(self, msg):
         self.dif = float(msg.data)
@@ -87,7 +88,7 @@ class MaquinaDeEstados:
         if self.deuVolta == True and x>-0.15 and x<0.15 and y>-0.05 and y<0.05:
             estado = "PARA"
 
-        if self.cx_creeper is not None and 512<self.cx_creeper<640:
+        if self.cx_creeper is not None and self.w*4//5<self.cx_creeper<self.w:
             estado = "FOCA CREEPER"
 
         return estado
@@ -95,21 +96,36 @@ class MaquinaDeEstados:
     def foca_creeper(self):
         estado = "FOCA CREEPER"
         self.twist.linear.x = 0
+        centro = self.w//2
 
         if self.cx_creeper is not None:
-            #sabe-se que o tamanho da tela é 640 pixels
-            if self.cx_creeper > 320:
+            if self.cx_creeper > centro:
                 self.twist.angular.z = -0.1
-            elif self.cx_creeper <320:
+            elif self.cx_creeper <centro:
                 self.twist.angular.z = 0.1
         
-        if 
+        if centro - 10 < self.cx_creeper < centro + 10:
+            estado = "SEGUE CREEPER"
 
         self.cmd_vel_pub.publish(self.twist)
         self.rate.sleep()
 
         return estado
     
+    def segue_creeper(self):
+        estado = "SEGUE CREEPER"
+        centro = self.w//2
+
+        if centro - 30 < self.cx_creeper < centro + 30:
+            self.twist.linear.x = 0.2
+            self.twist.angular.z = 0
+        else:
+            estado = "FOCA CREEPER"
+        
+        self.cmd_vel_pub.publish(self.twist)
+        self.rate.sleep()
+        return estado
+
     def stop(self):
         self.twist.linear.x = 0
         self.cmd_vel_pub.publish(self.twist)
@@ -120,13 +136,18 @@ class MaquinaDeEstados:
     #Controle
     def control(self):
 
+        print(self.laser_central)
+
         if self.estado=="SEGUE RETA":
             self.estado = self.segue_reta()
         
-        if self.estado=="FOCA CREEPER":
+        elif self.estado=="FOCA CREEPER":
             self.estado = self.foca_creeper()
+        
+        elif self.estado=="SEGUE CREEPER":
+            self.estado = self.segue_creeper()
 
-        if self.estado=="PARA":
+        elif self.estado=="PARA":
             self.estado = self.stop()
           
 if __name__== "__main__":

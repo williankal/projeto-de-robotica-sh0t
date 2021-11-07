@@ -137,8 +137,10 @@ class Image_converter:
 
             # cv2.imshow('mask', mask)
             # cv2.imshow('cv_image', cv_image)
-            cv2.imshow('mask_creeper', mask_creeper)
+            #cv2.imshow('mask_creeper', mask_creeper)
             # cv2.waitKey(1)
+            cv2.imshow('hue', mask_creeper)
+            cv2.waitKey(1)
 
         except CvBridgeError as e:
             print('ex', e)
