@@ -62,7 +62,7 @@ class MaquinaDeEstados:
     def laser_callback(self, msg):
         laser_msg = msg.ranges
         self.laser_central = laser_msg[0]
-        if laser_msg[0] < 0.2 or laser_msg[1]< 0.2 or laser_msg[2]< 0.2 or laser_msg[3]< 0.2 or laser_msg[359] < 0.2 or laser_msg[358] < 0.2 or laser_msg[357] < 0.2:
+        if laser_msg[0] < 0.15 or laser_msg[1]< 0.15 or laser_msg[2]< 0.15 or laser_msg[3]< 0.15 or laser_msg[359] < 0.15 or laser_msg[358] < 0.15 or laser_msg[357] < 0.15:
             self.colidiu = True
         else:
             self.colidiu = False
@@ -115,11 +115,6 @@ class MaquinaDeEstados:
         if centro - 10 < self.cx_creeper < centro + 10:
             estado = "SEGUE CREEPER"
 
-        if self.colidiu:
-            self.twist.linear.x = 0
-            self.twist.angular.z = 0            
-            estado = "PEGA CREEPER"
-
         self.cmd_vel_pub.publish(self.twist)
         self.rate.sleep()
 
@@ -129,22 +124,18 @@ class MaquinaDeEstados:
 
         estado = "PEGA CREEPER"
         
-        if self.laser_central < 0.185:
-            self.garra.publish(-1.0)
-            self.ombro.publish(-0.5)
-            rospy.sleep(2.0)
-            self.garra.publish(0.0) ## fecha
-            rospy.sleep(1.0)
-            self.ombro.publish(1.5) ## para cima
+        self.garra.publish(-1.0)
+        self.ombro.publish(-0.5)
+        rospy.sleep(2.0)
+        self.garra.publish(0.0) ## fecha
+        rospy.sleep(1.0)
+        self.ombro.publish(1.5) ## para cima
 
-            estado = "PARA"
+        estado = "PARA"
 
 
 
         return estado
-
-
-        
 
 
     def segue_creeper(self):
@@ -152,10 +143,16 @@ class MaquinaDeEstados:
         centro = self.w//2
 
         if centro - 30 < self.cx_creeper < centro + 30:
-            self.twist.linear.x = 0.1
+            self.twist.linear.x = 0.05
             self.twist.angular.z = 0
+
+        elif self.colidiu:
+            self.twist.linear.x = 0
+            self.twist.angular.z = 0            
+            estado = "PEGA CREEPER"
+
         else:
-            estado = "FOCA CREEPER"
+            estado = "FOCA CREEPER"   
 
         
         
