@@ -161,7 +161,7 @@ class Mobile_net:
 
         self.rospack = rospkg.RosPack()
         self.bridge = CvBridge()
-        self.path = self.rospack.get_path('ros_projeto')
+        self.path = self.rospack.get_path("projeto-mwrg")
         path = self.path
         self.scripts = os.path.join(path,  "scripts")
         self.image1 = None
