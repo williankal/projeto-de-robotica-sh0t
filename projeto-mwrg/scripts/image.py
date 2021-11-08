@@ -132,7 +132,17 @@ class Image_converter:
             self.publica_dif.publish(str(self.dif))
 
             if self.cx_creeper is not None:
-                self.publica_cx_creeper.publish(str(self.cx_creeper))
+                contornos, arvore = cv2.findContours(mask_creeper, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE) 
+
+                maior_area = 0
+                for contorno in contornos:
+                    area = cv2.contourArea(contorno)
+                    if area > maior_area:
+                        maior_area = area
+                print(maior_area)
+                if maior_area > 150:
+                    self.publica_cx_creeper.publish(str(self.cx_creeper))
+                
 
             # cv2.imshow('mask', mask)
             # cv2.imshow('cv_image', cv_image)
