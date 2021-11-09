@@ -16,7 +16,7 @@ from std_msgs.msg import Float64
 # Dados de Odometria
 x = -1
 y = -1
-z = -1
+
 
 def recebeu_leitura(dado):
     """
@@ -25,11 +25,11 @@ def recebeu_leitura(dado):
     """
     global x
     global y 
-    global z 
+
 
     x = dado.pose.pose.position.x
     y = dado.pose.pose.position.y
-    z = dado.pose.pose.position.z
+
 
 class MaquinaDeEstados:
 
@@ -105,6 +105,7 @@ class MaquinaDeEstados:
         estado = "FOCA CREEPER"
         self.twist.linear.x = 0
         centro = self.w//2
+        print(x,y)
 
         if self.cx_creeper is not None:
             if self.cx_creeper > centro:
@@ -132,7 +133,6 @@ class MaquinaDeEstados:
         self.ombro.publish(1.5) ## para cima
 
         estado = "PARA"
-
 
 
         return estado
@@ -166,6 +166,16 @@ class MaquinaDeEstados:
         self.rate.sleep()
         return "PARA"
 
+    def retorna_reta(self):
+
+        estado = "RETORNA RETA"        
+        #Controle P simples
+        self.twist.linear.x = 0.5
+        self.twist.angular.z = - self.dif / 100
+        
+        #publica velocidade
+        self.cmd_vel_pub.publish(self.twist)
+
     #Controle
     def control(self):
 
@@ -185,6 +195,9 @@ class MaquinaDeEstados:
 
         elif self.estado=="PARA":
             self.estado = self.stop()
+        
+        elif self.estado=="RETORNA RETA":
+            self.estado = self.retorna_reta()
           
 if __name__== "__main__":
     rospy.init_node('Controller')
