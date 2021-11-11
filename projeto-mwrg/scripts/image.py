@@ -15,6 +15,7 @@ import os
 from sensor_msgs.msg import CompressedImage
 from std_msgs.msg import String, Bool
 from cv_bridge import CvBridge, CvBridgeError
+from sklearn.linear_model import LinearRegression
 
 print(sys.argv)
 
@@ -68,6 +69,7 @@ class Image_converter:
         self.image_sub = rospy.Subscriber('/camera/image/compressed', CompressedImage, self.image_callback, queue_size=4, buff_size = 2**24)
         self.publica_dif = rospy.Publisher('/dif', String, queue_size=1)
         self.publica_cx_creeper = rospy.Publisher('/cx_creeper', String, queue_size=1)
+        self.publica_angulo = rospy.Publisher('/angulo_linha_amarela', String, queue_size=1)
         self.w = -1
         self.h = -1
         self.cx = -1
@@ -76,6 +78,7 @@ class Image_converter:
         self.proxdireita = False
         self.cordocreeper = sys.argv[1]
         self.cx_creeper = -1
+        self.angulo_linha_amarela = 0
 
     def image_callback(self, msg):
         
@@ -99,18 +102,54 @@ class Image_converter:
             mask = cv2.inRange(hsv, lower_yellow, upper_yellow)
             mask[0:search_top, 0:w] = 0
             mask[search_bot:h, 0:w] = 0
+            mask_angulo = cv2.inRange(hsv, lower_yellow, upper_yellow)
 
             if ids is not None and len(ids)>0:
                 aresta = abs(corners[0][0][0][0] - corners[0][0][1][0])
                 if not self.proxdireita and ids[0] == [200] and aresta > 30:
                     # bloqueia a parte direita da imagem (vira a esquerda)
                     mask[search_top:search_bot, 3*w//5:w] = 0
+                    mask_angulo[:,3*w//5:w] = 0
                 elif self.proxdireita and ids[0] == [200] and aresta > 30:
                     # bloqueia a parte esquerda da imagem (vira a direita)
                     mask[search_top:search_bot, 0:5*w//6] = 0
+                    mask_angulo[:, 0:5*w//6] = 0
                 elif ids[0] == [100]:
                     mask[search_top:search_bot, 3*w//5:w] = 0
+                    mask_angulo[:,3*w//5:w] = 0
                     self.proxdireita = True
+
+            # Achando contornos e centros dos contornos
+            # Mask_angulo vai ser utilizado para encontrar o angulo
+            # entre o robo e a faixa amarela
+
+            contornos_angulo, _ = cv2.findContours(mask_angulo, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+            lista_x_contornos = []
+            lista_y_contornos = []
+            
+            for c in contornos_angulo:
+                M_angulo = cv2.moments(c)
+                if M_angulo['m00'] > 0:
+                    lista_x_contornos.append(int(M_angulo['m10'] / M_angulo['m00']))
+                    lista_y_contornos.append(int(M_angulo['m01'] / M_angulo['m00']))
+            
+            if lista_x_contornos:
+                array_x_contornos = np.array(lista_x_contornos)
+                array_y_contornos = np.array(lista_y_contornos)
+
+                # Preparando dados dos centros dos contornos coletados
+                # para utilizar um modelo de regressao linear
+                yr = array_y_contornos.reshape(-1,1)
+                xr = array_x_contornos.reshape(-1)
+
+                reg = LinearRegression()
+                reg.fit(yr,xr)
+            
+                # Pega o angulo com a vertical e publica ele 
+                # para usar no controle proporcional diferencial
+                coef_angular = reg.coef_
+                self.angulo_linha_amarela = math.atan(coef_angular)
+                self.publica_angulo.publish(str(self.angulo_linha_amarela))
 
             # Achando centro de massa dos pontos amarelos
             M = cv2.moments(mask)
@@ -119,7 +158,7 @@ class Image_converter:
                 self.cx = int(M['m10']/M['m00'])
                 self.cy = int(M['m01']/M['m00'])
                 cv2.circle(cv_image, (self.cx, self.cy), 10, (0,0,255), -1)
-
+            
             # Definindo máscara para creepers a partir dos args
             mask_creeper, cx_creeper = mascara_creeper(sys.argv[1], hsv)
 
@@ -144,11 +183,11 @@ class Image_converter:
                     self.publica_cx_creeper.publish(str(self.cx_creeper))
                 
 
-            # cv2.imshow('mask', mask)
-            # cv2.imshow('cv_image', cv_image)
+            #cv2.imshow('mask', mask)
+            cv2.imshow('mask', mask_angulo)
+            #cv2.imshow('cv_image', cv_image)
             #cv2.imshow('mask_creeper', mask_creeper)
-            # cv2.waitKey(1)
-            cv2.imshow('hue', mask_creeper)
+            #cv2.imshow('hue', mask_creeper)
             cv2.waitKey(1)
 
         except CvBridgeError as e:
