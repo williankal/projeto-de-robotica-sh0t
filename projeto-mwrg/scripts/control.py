@@ -54,8 +54,6 @@ class MaquinaDeEstados:
         self.lastError = 0
         self.lado_direito = False
         self.estado = "SEGUE RETA"
-        self.max_vel_linear = 0.2
-        self.max_vel_angular = 2.0
         self.hertz = 250
         self.colidiu = False
         self.rate = rospy.Rate(self.hertz)
@@ -93,8 +91,8 @@ class MaquinaDeEstados:
         Kp = 1/100
         Kd = 1/1000
         psi = self.angulo_linha_amarela
-        print("Psi:{}".format(psi))
-        self.twist.linear.x = 0.8
+        #print("Psi:{}".format(psi))
+        self.twist.linear.x = 0.5
         self.twist.angular.z = - Kp*(self.dif + (Kd*(- math.sin(psi))))
         
         
@@ -107,9 +105,9 @@ class MaquinaDeEstados:
         if self.lado_direito == True and x>-0.15 and x<0.15 and y>-0.05 and y<0.05:
             estado = "PARA"
 
-        if self.cx_creeper is not None:
-            if  0<self.cx_creeper<self.w//5 or self.w*4//5<self.cx_creeper<self.w:
-                estado = "FOCA CREEPER"
+        # if self.cx_creeper is not None:
+        #     if  0<self.cx_creeper<self.w//5 or self.w*4//5<self.cx_creeper<self.w:
+        #         estado = "FOCA CREEPER"
         return estado
     
     def foca_creeper(self):
@@ -119,10 +117,8 @@ class MaquinaDeEstados:
         print(x,y)
 
         if self.cx_creeper is not None:
-            if self.cx_creeper > centro:
-                self.twist.angular.z = -0.1
-            elif self.cx_creeper <centro:
-                self.twist.angular.z = 0.1
+            delta = self.cx_creeper - centro
+            self.twist.angular.z = -delta/100
         
         if centro - 10 < self.cx_creeper < centro + 10:
             estado = "SEGUE CREEPER"
@@ -154,7 +150,7 @@ class MaquinaDeEstados:
         centro = self.w//2
 
         if centro - 30 < self.cx_creeper < centro + 30:
-            self.twist.linear.x = 0.05
+            self.twist.linear.x = 0.1
             self.twist.angular.z = 0
 
         elif self.colidiu:
@@ -173,6 +169,7 @@ class MaquinaDeEstados:
 
     def stop(self):
         self.twist.linear.x = 0
+        self.twist.angular.z = 0
         self.cmd_vel_pub.publish(self.twist)
         self.rate.sleep()
         return "PARA"

@@ -17,8 +17,6 @@ from std_msgs.msg import String, Bool
 from cv_bridge import CvBridge, CvBridgeError
 from sklearn.linear_model import LinearRegression
 
-print(sys.argv)
-
 def mascara_creeper(cor, img):
     """
         Recebe: cor desejada do creeper (escolhida a partir do terminal), imagem em hsv
@@ -90,19 +88,21 @@ class Image_converter:
 
             # Definindo campo de visão do robô
             h, w, d = cv_image.shape
-            search_top = 3*h//4
+            search_top = 3*h//5
             search_bot = 3*h//4 + 20
 
             # Definindo configurações do Aruco
             aruco_dict  = aruco.getPredefinedDictionary(aruco.DICT_6X6_250)
             corners, ids, rejectedImgPoints = aruco.detectMarkers(gray, aruco_dict)
             # Definindo para seguir linha amarela
-            lower_yellow = np.array([22, 50, 50],dtype=np.uint8)
+            lower_yellow = np.array([22, 200, 200],dtype=np.uint8)
             upper_yellow = np.array([36, 255, 255],dtype=np.uint8)
             mask = cv2.inRange(hsv, lower_yellow, upper_yellow)
             mask[0:search_top, 0:w] = 0
             mask[search_bot:h, 0:w] = 0
             mask_angulo = cv2.inRange(hsv, lower_yellow, upper_yellow)
+            mask_angulo[0:search_top, 0:w] = 0
+            mask_angulo[search_bot:h, 0:w] = 0
 
             if ids is not None and len(ids)>0:
                 aresta = abs(corners[0][0][0][0] - corners[0][0][1][0])
@@ -120,8 +120,7 @@ class Image_converter:
                     self.proxdireita = True
 
             # Achando contornos e centros dos contornos
-            # Mask_angulo vai ser utilizado para encontrar o angulo
-            # entre o robo e a faixa amarela
+            # Mask_angulo vai ser utilizado para encontrar o angulo entre o robo e a faixa amarela
 
             contornos_angulo, _ = cv2.findContours(mask_angulo, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
             lista_x_contornos = []
@@ -178,7 +177,7 @@ class Image_converter:
                     area = cv2.contourArea(contorno)
                     if area > maior_area:
                         maior_area = area
-                print(maior_area)
+                #print(maior_area)
                 if maior_area > 150:
                     self.publica_cx_creeper.publish(str(self.cx_creeper))
                 
@@ -186,8 +185,7 @@ class Image_converter:
             #cv2.imshow('mask', mask)
             cv2.imshow('mask', mask_angulo)
             #cv2.imshow('cv_image', cv_image)
-            #cv2.imshow('mask_creeper', mask_creeper)
-            #cv2.imshow('hue', mask_creeper)
+            cv2.imshow('mask_creeper', mask_creeper)
             cv2.waitKey(1)
 
         except CvBridgeError as e:
