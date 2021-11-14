@@ -12,11 +12,13 @@ from std_msgs.msg import String, Bool
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Float64
+from tf import transformations
 
 # Dados de Odometria
 x = -1
 y = -1
-
+theta = -1
+contador = 0
 
 def recebeu_leitura(dado):
     """
@@ -25,10 +27,20 @@ def recebeu_leitura(dado):
     """
     global x
     global y 
-
+    global contador
+    global theta
 
     x = dado.pose.pose.position.x
     y = dado.pose.pose.position.y
+
+    # quat = dado.pose.pose.orientation
+    # lista = [quat.x, quat.y, quat.z, quat.w]
+    # angulos = np.degrees(transformations.euler_from_quaternion(lista))    
+
+    # if contador % 50 == 0:
+    #     print("Posicao (x,y)  ({:.2f} , {:.2f}) + angulo {:.2f}".format(x, y,angulos[2]))
+    # contador = contador + 1
+    # theta = np.radians(angulos[2])
     
 
 
@@ -47,7 +59,6 @@ class MaquinaDeEstados:
         
         #Atributos da ME
         self.twist = Twist()
-        self.laser_central = 0
         self.dif = -1 #diferença dada por image.py
         self.cx_creeper = None # posição em x do creeper
         self.w = 640 # comprimento lateral da tela (pixels)
@@ -58,12 +69,14 @@ class MaquinaDeEstados:
         self.colidiu = False
         self.rate = rospy.Rate(self.hertz)
         self.angulo_linha_amarela = 0
+        self.pegou_creeper = False
+        self.ultima_posicao = []
+        self.posicao_atual = []
 
     #Funções de Callback
     def laser_callback(self, msg):
         laser_msg = msg.ranges
-        self.laser_central = laser_msg[0]
-        if laser_msg[0] < 0.15 or laser_msg[1]< 0.15 or laser_msg[2]< 0.15 or laser_msg[3]< 0.15 or laser_msg[359] < 0.15 or laser_msg[358] < 0.15 or laser_msg[357] < 0.15:
+        if laser_msg[0] < 0.4 or laser_msg[1]< 0.4 or laser_msg[2]< 0.4 or laser_msg[3]< 0.4 or laser_msg[359] < 0.4 or laser_msg[358] < 0.4 or laser_msg[357] < 0.4:
             self.colidiu = True
         else:
             self.colidiu = False
@@ -105,16 +118,18 @@ class MaquinaDeEstados:
         if self.lado_direito == True and x>-0.15 and x<0.15 and y>-0.05 and y<0.05:
             estado = "PARA"
 
-        # if self.cx_creeper is not None:
-        #     if  0<self.cx_creeper<self.w//5 or self.w*4//5<self.cx_creeper<self.w:
-        #         estado = "FOCA CREEPER"
+        if self.cx_creeper is not None and self.pegou_creeper==False:
+            if  0<self.cx_creeper<self.w//5 or self.w*4//5<self.cx_creeper<self.w:
+                estado = "FOCA CREEPER"
         return estado
     
     def foca_creeper(self):
         estado = "FOCA CREEPER"
         self.twist.linear.x = 0
         centro = self.w//2
-        print(x,y)
+
+        if len(self.ultima_posicao) == 0:
+            return "ANOTA POSICAO"
 
         if self.cx_creeper is not None:
             delta = self.cx_creeper - centro
@@ -128,43 +143,60 @@ class MaquinaDeEstados:
 
         return estado
 
-    def pega_creeper(self):
-
-        estado = "PEGA CREEPER"
-        
-        self.garra.publish(-1.0)
-        self.ombro.publish(-0.5)
-        rospy.sleep(2.0)
-        self.garra.publish(0.0) ## fecha
-        rospy.sleep(1.0)
-        self.ombro.publish(1.5) ## para cima
-
-        estado = "PARA"
-
-
-        return estado
-
+    def anota_posicao(self):
+        self.ultima_posicao.append(x)
+        self.ultima_posicao.append(y)
+        #print(self.ultima_posicao)
+        return "FOCA CREEPER"
 
     def segue_creeper(self):
         estado = "SEGUE CREEPER"
         centro = self.w//2
 
         if centro - 30 < self.cx_creeper < centro + 30:
-            self.twist.linear.x = 0.1
-            self.twist.angular.z = 0
+            delta = self.cx_creeper - centro
+            self.twist.angular.z = -delta/100
+            self.twist.linear.x = 0.15
 
         elif self.colidiu:
+            #print("Colidiu")
             self.twist.linear.x = 0
             self.twist.angular.z = 0            
             estado = "PEGA CREEPER"
 
         else:
             estado = "FOCA CREEPER"   
-
-        
         
         self.cmd_vel_pub.publish(self.twist)
         self.rate.sleep()
+        return estado
+
+    def pega_creeper(self):
+
+        estado = "RETORNA RETA"
+        self.pegou_creeper = True
+
+        self.posicao_atual.append(x)
+        self.posicao_atual.append(y)
+        
+        self.garra.publish(-1.0)
+        self.ombro.publish(-1.0)
+        rospy.sleep(3.0)
+        self.garra.publish(0.0) ## fecha
+        self.ombro.publish(1.5) ## para cima
+        rospy.sleep(3.0)
+        
+        return estado
+
+    def retorna_reta(self):
+
+        estado = "SEGUE RETA"
+        self.twist.linear.x = -0.1
+        self.twist.angular.z = 0
+        distancia = math.sqrt((self.ultima_posicao[0] - self.posicao_atual[0])**2 + (self.ultima_posicao[1] - self.posicao_atual[1])**2)
+        self.cmd_vel_pub.publish(self.twist)
+        rospy.sleep(distancia//0.1)
+
         return estado
 
     def stop(self):
@@ -174,23 +206,9 @@ class MaquinaDeEstados:
         self.rate.sleep()
         return "PARA"
 
-    def retorna_reta(self):
-
-        estado = "RETORNA RETA"        
-        # Implementacao de controle proporcional diferencial
-        Kp = 1/100
-        Kd = 1/1000
-        psi = self.angulo_linha_amarela
-        
-        self.twist.linear.x = 0.5
-        self.twist.angular.z = - Kp*(self.dif + (Kd*(- math.sin(psi))))
-        
-        #publica velocidade
-        self.cmd_vel_pub.publish(self.twist)
-
     #Controle
     def control(self):
-
+        
         print(self.estado)
 
         if self.estado=="SEGUE RETA":
@@ -199,17 +217,21 @@ class MaquinaDeEstados:
         elif self.estado=="FOCA CREEPER":
             self.estado = self.foca_creeper()
         
+        elif self.estado=="ANOTA POSICAO":
+            self.estado = self.anota_posicao()
+        
         elif self.estado=="SEGUE CREEPER":
             self.estado = self.segue_creeper()
 
         elif self.estado == "PEGA CREEPER":
             self.estado = self.pega_creeper()
+        
+        elif self.estado=="RETORNA RETA":
+            self.estado = self.retorna_reta()
 
         elif self.estado=="PARA":
             self.estado = self.stop()
         
-        elif self.estado=="RETORNA RETA":
-            self.estado = self.retorna_reta()
           
 if __name__== "__main__":
     rospy.init_node('Controller')
@@ -218,6 +240,7 @@ if __name__== "__main__":
 
     while not rospy.is_shutdown():
         controller.control()
+
         
 
         

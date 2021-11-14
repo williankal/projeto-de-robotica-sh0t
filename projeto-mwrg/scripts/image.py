@@ -88,7 +88,7 @@ class Image_converter:
 
             # Definindo campo de visão do robô
             h, w, d = cv_image.shape
-            search_top = 3*h//5
+            search_top = h//2
             search_bot = 3*h//4 + 20
 
             # Definindo configurações do Aruco
@@ -106,14 +106,15 @@ class Image_converter:
 
             if ids is not None and len(ids)>0:
                 aresta = abs(corners[0][0][0][0] - corners[0][0][1][0])
-                if not self.proxdireita and ids[0] == [200] and aresta > 30:
+                if not self.proxdireita and ids[0] == [200] and aresta > 40:
                     # bloqueia a parte direita da imagem (vira a esquerda)
                     mask[search_top:search_bot, 3*w//5:w] = 0
                     mask_angulo[:,3*w//5:w] = 0
                 elif self.proxdireita and ids[0] == [200] and aresta > 30:
                     # bloqueia a parte esquerda da imagem (vira a direita)
-                    mask[search_top:search_bot, 0:5*w//6] = 0
-                    mask_angulo[:, 0:5*w//6] = 0
+                    mask_angulo = cv2.inRange(hsv,lower_yellow, upper_yellow)
+                    mask[:, 0:3*w//4] = 0
+                    mask_angulo[:, 0:3*w//4] = 0
                 elif ids[0] == [100]:
                     mask[search_top:search_bot, 3*w//5:w] = 0
                     mask_angulo[:,3*w//5:w] = 0
