@@ -29,6 +29,7 @@ def recebeu_leitura(dado):
 
     x = dado.pose.pose.position.x
     y = dado.pose.pose.position.y
+    
 
 
 class MaquinaDeEstados:
@@ -42,7 +43,8 @@ class MaquinaDeEstados:
         self.ombro = rospy.Publisher("/joint1_position_controller/command", Float64, queue_size=1)
         self.garra = rospy.Publisher("/joint2_position_controller/command", Float64, queue_size=1)
         self.cx_creeper_subscriber = rospy.Subscriber('/cx_creeper', String, self.atualiza_cx_creeper)
-
+        self.angulo_linha_amarela_subscriber = rospy.Subscriber('/angulo_linha_amarelo', String, self.atualiza_angulo)
+        
         #Atributos da ME
         self.twist = Twist()
         self.laser_central = 0
@@ -57,6 +59,7 @@ class MaquinaDeEstados:
         self.hertz = 250
         self.colidiu = False
         self.rate = rospy.Rate(self.hertz)
+        self.angulo_linha_amarela = 0
 
     #Funções de Callback
     def laser_callback(self, msg):
@@ -76,6 +79,9 @@ class MaquinaDeEstados:
             data = float(msg.data)
         self.cx_creeper = data
 
+    def atualiza_angulo(self, msg):
+        self.angulo_linha_amarela = float(msg.data)
+
     def get_laser(self, pos):
         return self.laser_msg.ranges[pos]
     
@@ -83,9 +89,14 @@ class MaquinaDeEstados:
     def segue_reta(self):
 
         estado = "SEGUE RETA"        
-        #Controle P simples
-        self.twist.linear.x = 0.5
-        self.twist.angular.z = - self.dif / 100
+        # Implementacao de controle proporcional diferencial
+        Kp = 1/100
+        Kd = 1/1000
+        psi = self.angulo_linha_amarela
+        print("Psi:{}".format(psi))
+        self.twist.linear.x = 0.8
+        self.twist.angular.z = - Kp*(self.dif + (Kd*(- math.sin(psi))))
+        
         
         #publica velocidade
         self.cmd_vel_pub.publish(self.twist)
@@ -169,9 +180,13 @@ class MaquinaDeEstados:
     def retorna_reta(self):
 
         estado = "RETORNA RETA"        
-        #Controle P simples
+        # Implementacao de controle proporcional diferencial
+        Kp = 1/100
+        Kd = 1/1000
+        psi = self.angulo_linha_amarela
+        
         self.twist.linear.x = 0.5
-        self.twist.angular.z = - self.dif / 100
+        self.twist.angular.z = - Kp*(self.dif + (Kd*(- math.sin(psi))))
         
         #publica velocidade
         self.cmd_vel_pub.publish(self.twist)
