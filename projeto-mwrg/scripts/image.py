@@ -58,16 +58,18 @@ def mascara_creeper(cor, img):
         pass
 
 class Image_converter:
-
+ 
     def __init__(self):
         rospy.init_node('follower')
 
-        self.bridge = CvBridge()
-        self.cv_image = None
+        #Publishers e Subscribers
         self.image_sub = rospy.Subscriber('/camera/image/compressed', CompressedImage, self.image_callback, queue_size=4, buff_size = 2**24)
         self.publica_dif = rospy.Publisher('/dif', String, queue_size=1)
         self.publica_cx_creeper = rospy.Publisher('/cx_creeper', String, queue_size=1)
         self.publica_angulo = rospy.Publisher('/angulo_linha_amarela', String, queue_size=1)
+
+        self.bridge = CvBridge()
+        self.cv_image = None
         self.w = -1
         self.h = -1
         self.cx = -1
@@ -88,12 +90,13 @@ class Image_converter:
 
             # Definindo campo de visão do robô
             h, w, d = cv_image.shape
-            search_top = 3*h//5
+            search_top = h//2
             search_bot = 3*h//4 + 20
 
             # Definindo configurações do Aruco
             aruco_dict  = aruco.getPredefinedDictionary(aruco.DICT_6X6_250)
             corners, ids, rejectedImgPoints = aruco.detectMarkers(gray, aruco_dict)
+
             # Definindo para seguir linha amarela
             lower_yellow = np.array([22, 200, 200],dtype=np.uint8)
             upper_yellow = np.array([36, 255, 255],dtype=np.uint8)
@@ -106,14 +109,15 @@ class Image_converter:
 
             if ids is not None and len(ids)>0:
                 aresta = abs(corners[0][0][0][0] - corners[0][0][1][0])
-                if not self.proxdireita and ids[0] == [200] and aresta > 30:
+                if not self.proxdireita and ids[0] == [200] and aresta > 40:
                     # bloqueia a parte direita da imagem (vira a esquerda)
                     mask[search_top:search_bot, 3*w//5:w] = 0
                     mask_angulo[:,3*w//5:w] = 0
                 elif self.proxdireita and ids[0] == [200] and aresta > 30:
                     # bloqueia a parte esquerda da imagem (vira a direita)
-                    mask[search_top:search_bot, 0:5*w//6] = 0
-                    mask_angulo[:, 0:5*w//6] = 0
+                    mask_angulo = cv2.inRange(hsv,lower_yellow, upper_yellow)
+                    mask[:, 0:3*w//4] = 0
+                    mask_angulo[:, 0:3*w//4] = 0
                 elif ids[0] == [100]:
                     mask[search_top:search_bot, 3*w//5:w] = 0
                     mask_angulo[:,3*w//5:w] = 0
@@ -263,9 +267,6 @@ class Mobile_net:
                     #print(results)
         except:
             pass
-
-
-
 
 def main(args):
   ic = Image_converter()
