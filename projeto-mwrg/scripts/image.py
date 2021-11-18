@@ -60,14 +60,13 @@ def mascara_creeper(cor, img):
 class Image_converter:
  
     def __init__(self):
+        """
+            Construtor da classe (publishers + subscribers + atributos)
+        """
         rospy.init_node('follower')
 
-        #Publishers e Subscribers
+        #Câmera do robô
         self.image_sub = rospy.Subscriber('/camera/image/compressed', CompressedImage, self.image_callback, queue_size=4, buff_size = 2**24)
-        self.publica_dif = rospy.Publisher('/dif', String, queue_size=1)
-        self.publica_cx_creeper = rospy.Publisher('/cx_creeper', String, queue_size=1)
-        self.publica_angulo = rospy.Publisher('/angulo_linha_amarela', String, queue_size=1)
-
         self.bridge = CvBridge()
         self.cv_image = None
         self.w = -1
@@ -75,10 +74,26 @@ class Image_converter:
         self.cx = -1
         self.cy = -1
         self.dif = -1
-        self.proxdireita = False
-        self.cordocreeper = sys.argv[1]
+
+        #Publishers de atributos para control.py
+        self.publica_dif = rospy.Publisher('/dif', String, queue_size=1)
+        self.dif = -1
+
+        self.publica_cx_creeper = rospy.Publisher('/cx_creeper', String, queue_size=1)
         self.cx_creeper = -1
+
+        self.publica_angulo = rospy.Publisher('/angulo_linha_amarela', String, queue_size=1)
         self.angulo_linha_amarela = 0
+
+        self.publica_id = rospy.Publisher('/id_creeper', int, queue_size=1)
+
+
+        #Atributos lógicos
+        self.proxdireita = False
+
+        #Recebimento de instruções pelo terminal
+        self.cor_creeper = sys.argv[1]
+        self.id_creeper = sys.argv[2]
 
     def image_callback(self, msg):
         
@@ -109,13 +124,12 @@ class Image_converter:
 
             if ids is not None and len(ids)>0:
                 aresta = abs(corners[0][0][0][0] - corners[0][0][1][0])
-                if not self.proxdireita and ids[0] == [200] and aresta > 40:
+                if not self.proxdireita and ids[0] == [200] and aresta > 30:
                     # bloqueia a parte direita da imagem (vira a esquerda)
                     mask[search_top:search_bot, 3*w//5:w] = 0
                     mask_angulo[:,3*w//5:w] = 0
                 elif self.proxdireita and ids[0] == [200] and aresta > 30:
                     # bloqueia a parte esquerda da imagem (vira a direita)
-                    mask_angulo = cv2.inRange(hsv,lower_yellow, upper_yellow)
                     mask[:, 0:3*w//4] = 0
                     mask_angulo[:, 0:3*w//4] = 0
                 elif ids[0] == [100]:
@@ -163,7 +177,7 @@ class Image_converter:
                 cv2.circle(cv_image, (self.cx, self.cy), 10, (0,0,255), -1)
             
             # Definindo máscara para creepers a partir dos args
-            mask_creeper, cx_creeper = mascara_creeper(sys.argv[1], hsv)
+            mask_creeper, cx_creeper = mascara_creeper(self.cor_creeper, hsv)
 
             #Atualizando atributos e publicando dif
 
@@ -191,6 +205,7 @@ class Image_converter:
             #cv2.imshow('cv_image', cv_image)
             cv2.imshow('mask_creeper', mask_creeper)
             cv2.waitKey(1)
+            print(self.cx)
 
         except CvBridgeError as e:
             print('ex', e)
