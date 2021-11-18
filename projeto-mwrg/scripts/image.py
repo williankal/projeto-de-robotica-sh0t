@@ -85,7 +85,7 @@ class Image_converter:
         self.publica_angulo = rospy.Publisher('/angulo_linha_amarela', String, queue_size=1)
         self.angulo_linha_amarela = 0
 
-        self.publica_id = rospy.Publisher('/id_creeper', int, queue_size=1)
+        # self.publica_id = rospy.Publisher('/id_creeper', int, queue_size=1)
 
 
         #Atributos lógicos
@@ -93,7 +93,7 @@ class Image_converter:
 
         #Recebimento de instruções pelo terminal
         self.cor_creeper = sys.argv[1]
-        self.id_creeper = sys.argv[2]
+        # self.id_creeper = sys.argv[2]
 
     def image_callback(self, msg):
         

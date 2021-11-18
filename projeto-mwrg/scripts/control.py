@@ -4,9 +4,6 @@
 import rospy
 import numpy as np
 import math
-import cv2
-import time
-import sys
 from sensor_msgs.msg import Image, CompressedImage, LaserScan
 from std_msgs.msg import String, Bool
 from geometry_msgs.msg import Twist
@@ -55,6 +52,7 @@ class MaquinaDeEstados:
 
         #Laser
         self.laser_subscriber = rospy.Subscriber('/scan', LaserScan, self.laser_callback)
+        self.laser_msg = None
 
         #Garra  
         self.ombro = rospy.Publisher("/joint1_position_controller/command", Float64, queue_size=1)
@@ -74,11 +72,8 @@ class MaquinaDeEstados:
 
         #Atributos lógicos
         self.pegou_creeper = False
-        self.colidiu = False
         self.lado_direito = False
         self.estado = "SEGUE RETA"
-        self.ultima_posicao = []
-        self.posicao_atual = []
 
         #Funcionamento
         self.hertz = 250
@@ -87,15 +82,9 @@ class MaquinaDeEstados:
     #Funções de Callback
     def laser_callback(self, msg):
         """
-            Cria uma lista com as distâncias encontradas por cada sensor e
-            muda o self.colidiu (indica quando o robô está perto o bastante do
-            creeper para acionar a garra)
+            Cria uma lista com as distâncias encontradas por cada sensor
         """
-        laser_msg = msg.ranges
-        if laser_msg[0] < 0.4 or laser_msg[1]< 0.4 or laser_msg[2]< 0.4 or laser_msg[3]< 0.4 or laser_msg[359] < 0.4 or laser_msg[358] < 0.4 or laser_msg[357] < 0.4:
-            self.colidiu = True
-        else:
-            self.colidiu = False
+        self.laser_msg = msg.ranges
     
     def atualiza_dif(self, msg):
         """
@@ -170,10 +159,6 @@ class MaquinaDeEstados:
         self.twist.linear.x = 0
         centro = self.w//2
 
-        if len(self.ultima_posicao) == 0:
-            self.ultima_posicao.append(x)
-            self.ultima_posicao.append(y)
-
         if self.cx_creeper is not None:
             delta = self.cx_creeper - centro
             self.twist.angular.z = -delta/100
@@ -199,10 +184,14 @@ class MaquinaDeEstados:
 
         delta = self.cx_creeper - centro
         self.twist.angular.z = -(delta/100)
-        self.twist.linear.x = 0.1
+        self.twist.linear.x = 0.15
 
-        if self.colidiu:
-            #print("Colidiu")
+        if self.laser_msg[358]<0.7 or self.laser_msg[359]<0.7 or self.laser_msg[0]<0.7 or self.laser_msg[1]<0.7 or self.laser_msg[2]<0.7:
+            self.twist.linear.x = 0.05
+            self.garra.publish(-1.0)
+            self.ombro.publish(-0.35)
+
+        if self.laser_msg[0]<0.17:
             self.twist.linear.x = 0
             self.twist.angular.z = 0            
             estado = "PEGA CREEPER"  
@@ -218,17 +207,13 @@ class MaquinaDeEstados:
         """
 
         estado = "RETORNA RETA"
-        self.pegou_creeper = True
 
-        self.posicao_atual.append(x)
-        self.posicao_atual.append(y)
+        self.pegou_creeper = True
         
-        self.garra.publish(-1.0)
-        self.ombro.publish(-1.0)
-        rospy.sleep(3.0)
         self.garra.publish(0.0) ## fecha
+        rospy.sleep(2.0)
         self.ombro.publish(1.5) ## para cima
-        rospy.sleep(3.0)
+        rospy.sleep(2.0)
         
         return estado
 
@@ -248,9 +233,6 @@ class MaquinaDeEstados:
             estado = "SEGUE RETA"
 
         self.cmd_vel_pub.publish(self.twist)
-        # distancia = math.sqrt((self.ultima_posicao[0] - self.posicao_atual[0])**2 + (self.ultima_posicao[1] - self.posicao_atual[1])**2)
-        # self.cmd_vel_pub.publish(self.twist)
-        # rospy.sleep(distancia//0.1)
 
         return estado
 
