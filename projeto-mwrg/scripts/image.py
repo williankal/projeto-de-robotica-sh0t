@@ -105,7 +105,7 @@ class Image_converter:
 
             # Definindo campo de visão do robô
             h, w, d = cv_image.shape
-            search_top = h//2
+            search_top = 3*h//4 - 20
             search_bot = 3*h//4 + 20
 
             # Definindo configurações do Aruco
@@ -124,14 +124,15 @@ class Image_converter:
 
             if ids is not None and len(ids)>0:
                 aresta = abs(corners[0][0][0][0] - corners[0][0][1][0])
+                print(aresta)
                 if not self.proxdireita and ids[0] == [200] and aresta > 30:
                     # bloqueia a parte direita da imagem (vira a esquerda)
                     mask[search_top:search_bot, 3*w//5:w] = 0
                     mask_angulo[:,3*w//5:w] = 0
-                elif self.proxdireita and ids[0] == [200] and aresta > 30:
+                elif self.proxdireita and ids[0] == [200] and aresta > 42:
                     # bloqueia a parte esquerda da imagem (vira a direita)
-                    mask[:, 0:3*w//4] = 0
-                    mask_angulo[:, 0:3*w//4] = 0
+                    mask[search_top:search_bot, 0:3*w//4] = 0
+                    mask_angulo[search_top:search_bot, 0:3*w//4] = 0
                 elif ids[0] == [100]:
                     mask[search_top:search_bot, 3*w//5:w] = 0
                     mask_angulo[:,3*w//5:w] = 0
@@ -202,10 +203,10 @@ class Image_converter:
 
             #cv2.imshow('mask', mask)
             cv2.imshow('mask', mask_angulo)
-            #cv2.imshow('cv_image', cv_image)
-            cv2.imshow('mask_creeper', mask_creeper)
+            # #cv2.imshow('cv_image', cv_image)
+            # cv2.imshow('mask_creeper', mask_creeper)
             cv2.waitKey(1)
-            print(self.cx)
+            # print(self.cx)
 
         except CvBridgeError as e:
             print('ex', e)

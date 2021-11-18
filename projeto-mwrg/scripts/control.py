@@ -85,6 +85,7 @@ class MaquinaDeEstados:
             Cria uma lista com as distâncias encontradas por cada sensor
         """
         self.laser_msg = msg.ranges
+        print(self.laser_msg[0])
     
     def atualiza_dif(self, msg):
         """
@@ -142,9 +143,9 @@ class MaquinaDeEstados:
         if self.lado_direito == True and x>-0.15 and x<0.15 and y>-0.05 and y<0.05:
             estado = "PARA"
 
-        if self.cx_creeper is not None and self.pegou_creeper==False:
-            if self.w*4//5<self.cx_creeper<self.w:
-                estado = "FOCA CREEPER"
+        # if self.cx_creeper is not None and self.pegou_creeper==False:
+        #     if self.w*4//5<self.cx_creeper<self.w:
+        #         estado = "FOCA CREEPER"
         return estado
     
     def foca_creeper(self):
@@ -191,7 +192,7 @@ class MaquinaDeEstados:
             self.garra.publish(-1.0)
             self.ombro.publish(-0.35)
 
-        if self.laser_msg[0]<0.17:
+        if self.laser_msg[358]<0.17 or self.laser_msg[359]<0.17 or self.laser_msg[0]<0.17 or self.laser_msg[1]<0.17 or self.laser_msg[2]<0.17:
             self.twist.linear.x = 0
             self.twist.angular.z = 0            
             estado = "PEGA CREEPER"  
@@ -252,7 +253,7 @@ class MaquinaDeEstados:
             Responsável pela alteração dos estados
         """
         
-        print(self.estado)
+        # print(self.estado)
 
         if self.estado=="SEGUE RETA":
             self.estado = self.segue_reta()
