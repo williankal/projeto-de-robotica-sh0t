@@ -8,7 +8,7 @@ from sensor_msgs.msg import Image, CompressedImage, LaserScan
 from std_msgs.msg import String, Bool
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
-from std_msgs.msg import Float64
+from std_msgs.msg import Float64, Int16
 from tf import transformations
 
 # Dados de Odometria
@@ -30,14 +30,17 @@ def recebeu_leitura(dado):
     x = dado.pose.pose.position.x
     y = dado.pose.pose.position.y
 
-    # quat = dado.pose.pose.orientation
-    # lista = [quat.x, quat.y, quat.z, quat.w]
-    # angulos = np.degrees(transformations.euler_from_quaternion(lista))    
+    quat = dado.pose.pose.orientation
+    lista = [quat.x, quat.y, quat.z, quat.w]
+    angulos = np.degrees(transformations.euler_from_quaternion(lista))    
 
     # if contador % 50 == 0:
     #     print("Posicao (x,y)  ({:.2f} , {:.2f}) + angulo {:.2f}".format(x, y,angulos[2]))
     # contador = contador + 1
-    # theta = np.radians(angulos[2])
+    theta = np.radians(angulos[2])
+    theta_g = angulos[2]
+    # print(theta)
+    # print(theta_g)
     
 class MaquinaDeEstados:
 
@@ -70,6 +73,15 @@ class MaquinaDeEstados:
         self.angulo_linha_amarela_subscriber = rospy.Subscriber('/angulo_linha_amarelo', String, self.atualiza_angulo)
         self.angulo_linha_amarela = 0
 
+        self.id_creeper_subscriber = rospy.Subscriber('/id_creeper', Int16, self.atualiza_id_creeper)
+        self.id_creeper = None
+
+        self.id_subscriber = rospy.Subscriber('/id', Int16, self.atualiza_id)
+        self.id = None
+
+        self.cx_base_subscriber = rospy.Subscriber('/cx_base', Int16, self.atualiza_cx_base)
+        self.cx_base = None
+
         #Atributos lógicos
         self.pegou_creeper = False
         self.lado_direito = False
@@ -85,7 +97,7 @@ class MaquinaDeEstados:
             Cria uma lista com as distâncias encontradas por cada sensor
         """
         self.laser_msg = msg.ranges
-        print(self.laser_msg[0])
+        # print(self.laser_msg[0])
     
     def atualiza_dif(self, msg):
         """
@@ -112,6 +124,29 @@ class MaquinaDeEstados:
         """
         self.angulo_linha_amarela = float(msg.data)
     
+    def atualiza_id_creeper(self, msg):
+        """
+            Guarda o id pedido pelo terminal em self.id_creeper
+        """
+    
+        self.id_creeper = int(msg.data)
+        # print(self.id_creeper)
+    
+    def atualiza_id(self, msg):
+        """
+            Guarda os ids identificados pela câmera em self.id_creeper
+        """
+    
+        self.id = int(msg.data)
+    
+    def atualiza_cx_base(self, msg):
+        """
+            Guarda o cx da base em self.cx_base
+        """
+    
+        self.cx_base = int(msg.data)
+        print(self.cx_base)
+
     #Estados
     def segue_reta(self):
         """
@@ -130,7 +165,7 @@ class MaquinaDeEstados:
         Kd = 1/1000
         psi = self.angulo_linha_amarela
         #print("Psi:{}".format(psi))
-        self.twist.linear.x = 0.5
+        self.twist.linear.x = 0.7
         self.twist.angular.z = - Kp*(self.dif + (Kd*(- math.sin(psi))))
         
         
@@ -144,8 +179,9 @@ class MaquinaDeEstados:
             estado = "PARA"
 
         # if self.cx_creeper is not None and self.pegou_creeper==False:
-        #     if self.w*4//5<self.cx_creeper<self.w:
+        #     if 0<self.cx_creeper<self.w and self.id_creeper==self.id:
         #         estado = "FOCA CREEPER"
+
         return estado
     
     def foca_creeper(self):
@@ -184,10 +220,11 @@ class MaquinaDeEstados:
         centro = self.w//2
 
         delta = self.cx_creeper - centro
-        self.twist.angular.z = -(delta/100)
+        self.twist.angular.z = -(delta/75)
         self.twist.linear.x = 0.15
+        # print(self.laser_msg[0])
 
-        if self.laser_msg[358]<0.7 or self.laser_msg[359]<0.7 or self.laser_msg[0]<0.7 or self.laser_msg[1]<0.7 or self.laser_msg[2]<0.7:
+        if self.laser_msg[358]<0.5 or self.laser_msg[359]<0.5 or self.laser_msg[0]<0.5 or self.laser_msg[1]<0.5 or self.laser_msg[2]<0.5:
             self.twist.linear.x = 0.05
             self.garra.publish(-1.0)
             self.ombro.publish(-0.35)
@@ -228,7 +265,7 @@ class MaquinaDeEstados:
         # Usado para não criar outro par publisher/subscriber
 
         estado = "RETORNA RETA"
-        self.twist.linear.x = -0.1
+        self.twist.linear.x = -0.3
         self.twist.angular.z = 0
         if cx>70:
             estado = "SEGUE RETA"
@@ -269,6 +306,15 @@ class MaquinaDeEstados:
         
         elif self.estado=="RETORNA RETA":
             self.estado = self.retorna_reta()
+
+        # elif self.estado=="FOCA BASE":
+        #     self.estado = self.foca_base()
+        
+        # elif self.estado=="SEGUE BASE":
+        #     self.estado = self.segue_base()
+        
+        # elif self.estado=="DEIXA CREEPER":
+        #     self.estado = self.deixa_creeper()
 
         elif self.estado=="PARA":
             self.estado = self.stop()
