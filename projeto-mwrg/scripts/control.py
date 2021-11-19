@@ -68,8 +68,6 @@ class MaquinaDeEstados:
 
         #Atributos lógicos
         self.pegou_creeper = False
-        self.deixou_base = False
-        self.acabou = False
         self.lado_direito = False
         self.estado = "SEGUE RETA"
 
@@ -101,7 +99,7 @@ class MaquinaDeEstados:
         if msg.data is not None:
             data = float(msg.data)
         self.cx_creeper = data
-        print(self.cx_creeper)
+        # print(self.cx_creeper)
 
     def atualiza_angulo(self, msg):
         """
@@ -154,15 +152,15 @@ class MaquinaDeEstados:
         #publica velocidade
         self.cmd_vel_pub.publish(self.twist)
         
-        if x>0.3:
+        if x>1:
             self.lado_direito = True
         
         if self.lado_direito == True and x>-0.15 and x<0.15 and y>-0.05 and y<0.05:
             estado = "PARA"
 
-        if self.cx_creeper is not None and self.pegou_creeper==False:
-            if 0<self.cx_creeper<self.w and self.id_creeper==self.id:
-                estado = "FOCA CREEPER"
+        # if self.cx_creeper is not None and self.pegou_creeper==False:
+        #     if 0<self.cx_creeper<self.w and self.id_creeper==self.id:
+        #         estado = "FOCA CREEPER"
 
         return estado
     
