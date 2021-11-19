@@ -9,7 +9,12 @@ Nome dos integrantes:
 * Renato Laffranchi Falcão
 * Gabriel Hideki Stanzani Onishi
 
+## Conceito esperado: B
 
+# Especiais realizados:
+    - Uso de classes e objetos Python em todos os arquivos criados para o projeto
+    - Fazer um controle proporcional derivativo ou PD para manter o robô na pista e fazer funcionar rápido baseado no ângulo de visão da pista.
+    - Estruturar o programa com pelo menos um node ROS prestando serviço para o outro.
 
 # Instruções
 
@@ -40,3 +45,4 @@ Para rodar o projeto:
 Visite o enunciado abaixo do projeto:
 
 	https://github.com/Insper/robot21.2/blob/main/projeto/projeto.md
+
