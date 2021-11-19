@@ -15,6 +15,12 @@ Nome dos integrantes:
     - Uso de classes e objetos Python em todos os arquivos criados para o projeto
     - Fazer um controle proporcional derivativo ou PD para manter o robô na pista e fazer funcionar rápido baseado no ângulo de visão da pista.
     - Estruturar o programa com pelo menos um node ROS prestando serviço para o outro.
+    
+# Vídeos de objetivos:
+	* Creeper azul => https://www.youtube.com/watch?v=utedduyPo2w
+	* Creeper laranja => https://www.youtube.com/watch?v=d973oGe-djQ
+	* Creeper verde => https://www.youtube.com/watch?v=f27nZ8RuqtU
+	* Completo => https://www.youtube.com/watch?v=2hbI-sja4DA
 
 # Instruções
 
