@@ -70,6 +70,8 @@ class MaquinaDeEstados:
         self.pegou_creeper = False
         self.lado_direito = False
         self.estado = "SEGUE RETA"
+        self.ultima_posicao = []
+        self.posicao_atual = []
 
         #Funcionamento
         self.hertz = 250
@@ -158,9 +160,9 @@ class MaquinaDeEstados:
         if self.lado_direito == True and x>-0.15 and x<0.15 and y>-0.05 and y<0.05:
             estado = "PARA"
 
-        # if self.cx_creeper is not None and self.pegou_creeper==False:
-        #     if 0<self.cx_creeper<self.w and self.id_creeper==self.id:
-        #         estado = "FOCA CREEPER"
+        if self.cx_creeper is not None and self.pegou_creeper==False:
+            if 0<self.cx_creeper<self.w and self.id_creeper==self.id:
+                estado = "FOCA CREEPER"
 
         return estado
     
@@ -175,6 +177,10 @@ class MaquinaDeEstados:
         estado = "FOCA CREEPER"
         self.twist.linear.x = 0
         centro = self.w//2
+
+        if len(self.ultima_posicao) == 0:
+            self.ultima_posicao.append(x)
+            self.ultima_posicao.append(y)
 
         if self.cx_creeper is not None:
             delta = self.cx_creeper - centro
@@ -231,6 +237,10 @@ class MaquinaDeEstados:
         rospy.sleep(2.0)
         self.ombro.publish(1.5) ## para cima
         rospy.sleep(2.0)
+
+        if len(self.posicao_atual)==0:
+            self.posicao_atual.append(x)
+            self.posicao_atual.append(y)
         
         return estado
 
@@ -242,14 +252,12 @@ class MaquinaDeEstados:
         # self.dif = self.cx - self.w/2
         cx = self.dif + self.w/2
         # Usado para não criar outro par publisher/subscriber
-
-        estado = "RETORNA RETA"
-        self.twist.linear.x = -0.3
-        self.twist.angular.z = 0
-        if cx>70:
-            estado = "SEGUE RETA"
-
+        
+        distancia = math.sqrt((self.ultima_posicao[0] - self.posicao_atual[0])**2 + (self.ultima_posicao[1] - self.posicao_atual[1])**2)
+        estado = "SEGUE RETA"
+        self.twist.linear.x = -0.1
         self.cmd_vel_pub.publish(self.twist)
+        rospy.sleep(distancia/0.1)
 
         return estado
     

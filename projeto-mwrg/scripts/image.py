@@ -82,7 +82,6 @@ class Image_converter:
             mask_angulo[search_bot:h, 0:w] = 0
 
             if ids is not None and len(ids)>0:
-                print(ids[0])
                 aresta = abs(corners[0][0][0][0] - corners[0][0][1][0])
                 if not self.proxdireita and ids[0] == [200] and aresta > 30:
                     # bloqueia a parte direita da imagem (vira a esquerda)
