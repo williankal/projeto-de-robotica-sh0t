@@ -13,7 +13,7 @@ import time
 import argparse
 import os
 from sensor_msgs.msg import CompressedImage
-from std_msgs.msg import String, Bool
+from std_msgs.msg import String, Int16
 from cv_bridge import CvBridge, CvBridgeError
 from sklearn.linear_model import LinearRegression
 
@@ -74,7 +74,10 @@ class Image_converter:
         self.publica_angulo = rospy.Publisher('/angulo_linha_amarela', String, queue_size=1)
         self.angulo_linha_amarela = 0
 
-        # self.publica_id = rospy.Publisher('/id_creeper', int, queue_size=1)
+        # self.publica_id = rospy.Publisher('/id', int, queue_size=1)
+
+        self.publica_id_creeper = rospy.Publisher('/id_creeper', Int16, queue_size=1)
+        self.publica_id = rospy.Publisher('/id', Int16, queue_size=1)
 
 
         #Atributos lógicos
@@ -82,7 +85,7 @@ class Image_converter:
 
         #Recebimento de instruções pelo terminal
         self.cor_creeper = sys.argv[1]
-        # self.id_creeper = sys.argv[2]
+        self.id_creeper = sys.argv[2]
 
     def image_callback(self, msg):
         
@@ -109,7 +112,7 @@ class Image_converter:
 
             if ids is not None and len(ids)>0:
                 aresta = abs(corners[0][0][0][0] - corners[0][0][1][0])
-                print(aresta)
+                # print(aresta)
                 if not self.proxdireita and ids[0] == [200] and aresta > 30:
                     # bloqueia a parte direita da imagem (vira a esquerda)
                     mask[search_top:search_bot, 3*w//5:w] = 0
@@ -122,6 +125,10 @@ class Image_converter:
                     mask[search_top:search_bot, 3*w//5:w] = 0
                     mask_angulo[:,3*w//5:w] = 0
                     self.proxdireita = True
+                self.publica_id.publish(int(ids[0]))
+            
+            if self.id_creeper is not None:   
+                self.publica_id_creeper.publish(int(self.id_creeper)) 
 
             # Mask_angulo vai ser utilizado para encontrar o angulo entre o robo e a faixa amarela
             self.angulo_linha_amarela = biblioteca.encontra_angulo_com_vertical(mask_angulo)
@@ -147,14 +154,13 @@ class Image_converter:
                 maior_area = biblioteca.encontra_maior_area_de_contorno(mask_creeper)
                 if maior_area > 150:
                     self.publica_cx_creeper.publish(str(self.cx_creeper))
-                
 
-            #cv2.imshow('mask', mask)
-            cv2.imshow('mask', mask_angulo)
-            # #cv2.imshow('cv_image', cv_image)
+            # #cv2.imshow('mask', mask)
+            # cv2.imshow('mask', mask_angulo)
+            # # #cv2.imshow('cv_image', cv_image)
             # cv2.imshow('mask_creeper', mask_creeper)
-            cv2.waitKey(1)
-            # print(self.cx)
+            # cv2.waitKey(1)
+            # # print(self.cx)
 
         except CvBridgeError as e:
             print('ex', e)
@@ -172,9 +178,11 @@ class Mobile_net:
         self.image1 = None
         self.proto = os.path.join(self.scripts,"MobileNetSSD_deploy.prototxt.txt")
         self.model = os.path.join(self.scripts, "MobileNetSSD_deploy.caffemodel")
-        self.confianca = 0.5
+        self.confianca = 0.3
         self.image_sub = rospy.Subscriber('/camera/image/compressed', CompressedImage, self.detect, queue_size=4, buff_size = 2**24)
-        
+        self.base = sys.argv[3]
+        self.cx_base = None
+        self.publica_cx_base = rospy.Publisher('/cx_base', Int16 , queue_size=1)
         
         self.CLASSES = ["background", "aeroplane", "bicycle", "bird", "boat",
         "bottle", "bus", "car", "cat", "chair", "cow", "diningtable",
@@ -199,7 +207,6 @@ class Mobile_net:
             detections = self.net.forward()
             results = []
 
-
             # loop over the detections
             for i in np.arange(0, detections.shape[2]):
                 # extract the confidence (i.e., probability) associated with the
@@ -217,7 +224,7 @@ class Mobile_net:
                     idx = int(detections[0, 0, i, 1])
                     box = detections[0, 0, i, 3:7] * np.array([w, h, w, h])
                     (startX, startY, endX, endY) = box.astype("int")
-
+                    self.cx_base = endX - endY
                     # display the prediction
                     label = "{}: {:.2f}%".format(self.CLASSES[idx], confidence * 100)
                     #print("[INFO] {}".format(label))
@@ -226,9 +233,23 @@ class Mobile_net:
                     y = startY - 15 if startY - 15 > 15 else startY + 15
                     cv2.putText(image1, label, (startX, y),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, self.COLORS[idx], 2)
-
+                
                     results.append((self.CLASSES[idx], confidence*100, (startX, startY),(endX, endY) ))
-                    #print(results)
+                    
+                    if(self.CLASSES[idx] != "diningtable"):
+                        print(self.CLASSES[idx])
+
+            cv2.imshow("Mobilenet", image1)
+            cv2.waitKey(1)
+
+            # cow - cow ou horse
+            # horse - boat
+            # dog - dog ou chair
+
+            # if self.base == 'cow':
+            #     if self.CLASSES[idx] == 'cow' and self.cx_base is not None:
+            self.publica_cx_base.publish(self.cx_base)
+
         except:
             pass
 
