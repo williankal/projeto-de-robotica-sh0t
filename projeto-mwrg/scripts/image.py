@@ -21,14 +21,14 @@ import biblioteca
 
 def mascara_creeper(cor, img):
     """
-        Recebe: cor desejada do creeper (escolhida a partir do terminal), imagem em hsv
-        Devolve: máscara segmentando cor do creeper, centro de massa do creeper
+    Recebe: cor desejada do creeper (escolhida a partir do terminal), imagem em hsv
+    Devolve: máscara segmentada pela cor do creeper, centro de massa do creeper
     """
     hsv = img.copy()
     cx_creeper = None
     try:
         if cor == "blue":
-            mask = biblioteca.segmenta_azul(hsv)
+            mask = biblioteca.segmenta_blue(hsv)
 
         if cor == "green":
             mask = biblioteca.segmenta_green(hsv)
@@ -50,7 +50,7 @@ class Image_converter:
  
     def __init__(self):
         """
-            Construtor da classe (publishers + subscribers + atributos)
+        Construtor da classe (publishers + subscribers + atributos)
         """
         rospy.init_node('follower')
 
@@ -133,10 +133,13 @@ class Image_converter:
             # Mask_angulo vai ser utilizado para encontrar o angulo entre o robo e a faixa amarela
             self.angulo_linha_amarela = biblioteca.encontra_angulo_com_vertical(mask_angulo)
             self.publica_angulo.publish(str(self.angulo_linha_amarela))
-
+    
+            # Utiliza o método "moments" da biblioteca cv2 na máscara
+            M = cv2.moments(mask)
+            
             # Achando centro de massa dos pontos amarelo
-            self.cx = biblioteca.encontra_centro_x(mask)
-            self.cy = biblioteca.encontra_centro_y(mask)
+            self.cx = biblioteca.encontra_centro_x(M)
+            self.cy = biblioteca.encontra_centro_y(M)
             cv2.circle(cv_image, (self.cx, self.cy), 10, (0,0,255), -1)
             
             # Definindo máscara para creepers a partir dos args
