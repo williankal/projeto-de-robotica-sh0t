@@ -17,6 +17,8 @@ from std_msgs.msg import String, Bool
 from cv_bridge import CvBridge, CvBridgeError
 from sklearn.linear_model import LinearRegression
 
+import biblioteca
+
 def mascara_creeper(cor, img):
     """
         Recebe: cor desejada do creeper (escolhida a partir do terminal), imagem em hsv
@@ -26,34 +28,21 @@ def mascara_creeper(cor, img):
     cx_creeper = None
     try:
         if cor == "blue":
-            cor1 = np.array([90, 140, 140],dtype=np.uint8)
-            cor2 = np.array([100, 255, 255],dtype=np.uint8)
-            mask = cv2.inRange(hsv, cor1, cor2)
+            mask = biblioteca.segmenta_azul(hsv)
 
         if cor == "green":
-            cor1 = np.array([55, 150, 200],dtype=np.uint8)
-            cor2 = np.array([65, 255, 255],dtype=np.uint8)
-            mask = cv2.inRange(hsv, cor1, cor2)
+            mask = biblioteca.segmenta_green(hsv)
 
         if cor == "orange":
-            cor1 = np.array([0, 200, 200],dtype=np.uint8)
-            cor2 = np.array([4, 255, 255],dtype=np.uint8)
-            cor3 = np.array([177, 200, 200],dtype=np.uint8)
-            cor4 = np.array([180, 255, 255],dtype=np.uint8)
-            mask1 = cv2.inRange(hsv, cor1, cor2)
-            mask2 = cv2.inRange(hsv, cor3, cor4)
-            mask = cv2.bitwise_or(mask1,mask2)
+            mask = biblioteca.segmenta_orange(hsv)
         
         # Achando centro de massa do creeper
         try:
-            M = cv2.moments(mask)
-
-            if M['m00'] > 0:
-                cx_creeper = int(M['m10']/M['m00'])
+            cx_creeper = biblioteca.encontra_centro_x(mask)
         except:
             pass    
 
-        return mask,cx_creeper        
+        return mask, cx_creeper        
     except: 
         pass
 
@@ -113,14 +102,10 @@ class Image_converter:
             corners, ids, rejectedImgPoints = aruco.detectMarkers(gray, aruco_dict)
 
             # Definindo para seguir linha amarela
-            lower_yellow = np.array([22, 200, 200],dtype=np.uint8)
-            upper_yellow = np.array([36, 255, 255],dtype=np.uint8)
-            mask = cv2.inRange(hsv, lower_yellow, upper_yellow)
+            mask = biblioteca.segmenta_yellow(hsv)
             mask[0:search_top, 0:w] = 0
             mask[search_bot:h, 0:w] = 0
-            mask_angulo = cv2.inRange(hsv, lower_yellow, upper_yellow)
-            mask_angulo[0:search_top, 0:w] = 0
-            mask_angulo[search_bot:h, 0:w] = 0
+            mask_angulo = biblioteca.segmenta_yellow(hsv)
 
             if ids is not None and len(ids)>0:
                 aresta = abs(corners[0][0][0][0] - corners[0][0][1][0])
@@ -138,44 +123,14 @@ class Image_converter:
                     mask_angulo[:,3*w//5:w] = 0
                     self.proxdireita = True
 
-            # Achando contornos e centros dos contornos
             # Mask_angulo vai ser utilizado para encontrar o angulo entre o robo e a faixa amarela
+            self.angulo_linha_amarela = biblioteca.encontra_angulo_com_vertical(mask_angulo)
+            self.publica_angulo.publish(str(self.angulo_linha_amarela))
 
-            contornos_angulo, _ = cv2.findContours(mask_angulo, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-            lista_x_contornos = []
-            lista_y_contornos = []
-            
-            for c in contornos_angulo:
-                M_angulo = cv2.moments(c)
-                if M_angulo['m00'] > 0:
-                    lista_x_contornos.append(int(M_angulo['m10'] / M_angulo['m00']))
-                    lista_y_contornos.append(int(M_angulo['m01'] / M_angulo['m00']))
-            
-            if lista_x_contornos:
-                array_x_contornos = np.array(lista_x_contornos)
-                array_y_contornos = np.array(lista_y_contornos)
-
-                # Preparando dados dos centros dos contornos coletados
-                # para utilizar um modelo de regressao linear
-                yr = array_y_contornos.reshape(-1,1)
-                xr = array_x_contornos.reshape(-1)
-
-                reg = LinearRegression()
-                reg.fit(yr,xr)
-            
-                # Pega o angulo com a vertical e publica ele 
-                # para usar no controle proporcional diferencial
-                coef_angular = reg.coef_
-                self.angulo_linha_amarela = math.atan(coef_angular)
-                self.publica_angulo.publish(str(self.angulo_linha_amarela))
-
-            # Achando centro de massa dos pontos amarelos
-            M = cv2.moments(mask)
-
-            if M['m00'] > 0:
-                self.cx = int(M['m10']/M['m00'])
-                self.cy = int(M['m01']/M['m00'])
-                cv2.circle(cv_image, (self.cx, self.cy), 10, (0,0,255), -1)
+            # Achando centro de massa dos pontos amarelo
+            self.cx = biblioteca.encontra_centro_x(mask)
+            self.cy = biblioteca.encontra_centro_y(mask)
+            cv2.circle(cv_image, (self.cx, self.cy), 10, (0,0,255), -1)
             
             # Definindo máscara para creepers a partir dos args
             mask_creeper, cx_creeper = mascara_creeper(self.cor_creeper, hsv)
@@ -189,14 +144,7 @@ class Image_converter:
             self.publica_dif.publish(str(self.dif))
 
             if self.cx_creeper is not None:
-                contornos, arvore = cv2.findContours(mask_creeper, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE) 
-
-                maior_area = 0
-                for contorno in contornos:
-                    area = cv2.contourArea(contorno)
-                    if area > maior_area:
-                        maior_area = area
-                #print(maior_area)
+                maior_area = biblioteca.encontra_maior_area_de_contorno(mask_creeper)
                 if maior_area > 150:
                     self.publica_cx_creeper.publish(str(self.cx_creeper))
                 
