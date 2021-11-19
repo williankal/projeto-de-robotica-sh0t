@@ -82,7 +82,7 @@ def encontra_angulo_com_vertical(mascara):
         lista_centros_x_contornos.append(encontra_centro_x(M_angulo))
         lista_centros_y_contornos.append(encontra_centro_y(M_angulo))
     
-    if lista_x_contornos:
+    if lista_centros_x_contornos:
         # Transforma em array
         array_centros_x_contornos = np.array(lista_centros_x_contornos)
         array_centros_y_contornos = np.array(lista_centros_y_contornos)
