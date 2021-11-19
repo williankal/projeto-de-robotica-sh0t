@@ -1,56 +1,25 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 
+import biblioteca
 import sys
-from numpy.lib.twodim_base import _trilu_dispatcher
 import rospy
 import numpy as np
 import math
 import cv2
 import cv2.aruco as aruco
 import rospkg
-import time
-import argparse
 import os
 from sensor_msgs.msg import CompressedImage
 from std_msgs.msg import String, Int16
 from cv_bridge import CvBridge, CvBridgeError
 from sklearn.linear_model import LinearRegression
 
-import biblioteca
-
-def mascara_creeper(cor, img):
-    """
-    Recebe: cor desejada do creeper (escolhida a partir do terminal), imagem em hsv
-    Devolve: máscara segmentada pela cor do creeper, centro de massa do creeper
-    """
-    hsv = img.copy()
-    cx_creeper = None
-    try:
-        if cor == "blue":
-            mask = biblioteca.segmenta_blue(hsv)
-
-        if cor == "green":
-            mask = biblioteca.segmenta_green(hsv)
-
-        if cor == "orange":
-            mask = biblioteca.segmenta_orange(hsv)
-        
-        # Achando centro de massa do creeper
-        try:
-            cx_creeper = biblioteca.encontra_centro_x(mask)
-        except:
-            pass    
-
-        return mask, cx_creeper        
-    except: 
-        pass
-
 class Image_converter:
  
     def __init__(self):
         """
-        Construtor da classe (publishers + subscribers + atributos)
+            Construtor da classe (publishers + subscribers + atributos)
         """
         rospy.init_node('follower')
 
@@ -109,10 +78,11 @@ class Image_converter:
             mask[0:search_top, 0:w] = 0
             mask[search_bot:h, 0:w] = 0
             mask_angulo = biblioteca.segmenta_yellow(hsv)
+            mask_angulo[0:search_top, 0:w] = 0
+            mask_angulo[search_bot:h, 0:w] = 0
 
             if ids is not None and len(ids)>0:
                 aresta = abs(corners[0][0][0][0] - corners[0][0][1][0])
-                # print(aresta)
                 if not self.proxdireita and ids[0] == [200] and aresta > 30:
                     # bloqueia a parte direita da imagem (vira a esquerda)
                     mask[search_top:search_bot, 3*w//5:w] = 0
@@ -130,20 +100,22 @@ class Image_converter:
             if self.id_creeper is not None:   
                 self.publica_id_creeper.publish(int(self.id_creeper)) 
 
+            # Achando contornos e centros dos contornos
             # Mask_angulo vai ser utilizado para encontrar o angulo entre o robo e a faixa amarela
-            self.angulo_linha_amarela = biblioteca.encontra_angulo_com_vertical(mask_angulo)
-            self.publica_angulo.publish(str(self.angulo_linha_amarela))
-    
-            # Utiliza o método "moments" da biblioteca cv2 na máscara
-            M = cv2.moments(mask)
             
-            # Achando centro de massa dos pontos amarelo
-            self.cx = biblioteca.encontra_centro_x(M)
-            self.cy = biblioteca.encontra_centro_y(M)
-            cv2.circle(cv_image, (self.cx, self.cy), 10, (0,0,255), -1)
+            self.angulo_linha_amarela = biblioteca.encontra_angulo_com_vertical
+            self.publica_angulo.publish(str(self.angulo_linha_amarela))
+
+            # Achando centro de massa dos pontos amarelos
+            M = cv2.moments(mask)
+
+            if M['m00'] > 0:
+                self.cx = int(M['m10']/M['m00'])
+                self.cy = int(M['m01']/M['m00'])
+                cv2.circle(cv_image, (self.cx, self.cy), 10, (0,0,255), -1)
             
             # Definindo máscara para creepers a partir dos args
-            mask_creeper, cx_creeper = mascara_creeper(self.cor_creeper, hsv)
+            mask_creeper, cx_creeper = biblioteca.mascara_creeper(self.cor_creeper, hsv)
 
             #Atualizando atributos e publicando dif
 
@@ -155,15 +127,14 @@ class Image_converter:
 
             if self.cx_creeper is not None:
                 maior_area = biblioteca.encontra_maior_area_de_contorno(mask_creeper)
-                if maior_area > 150:
+                if maior_area > 100:
                     self.publica_cx_creeper.publish(str(self.cx_creeper))
 
-            # #cv2.imshow('mask', mask)
+            # cv2.imshow('mask', mask)
             # cv2.imshow('mask', mask_angulo)
-            # # #cv2.imshow('cv_image', cv_image)
+            cv2.imshow('cv_image', cv_image)
             # cv2.imshow('mask_creeper', mask_creeper)
-            # cv2.waitKey(1)
-            # # print(self.cx)
+            cv2.waitKey(1)
 
         except CvBridgeError as e:
             print('ex', e)
@@ -242,8 +213,8 @@ class Mobile_net:
                     if(self.CLASSES[idx] != "diningtable"):
                         print(self.CLASSES[idx])
 
-            cv2.imshow("Mobilenet", image1)
-            cv2.waitKey(1)
+            # cv2.imshow("Mobilenet", image1)
+            # cv2.waitKey(1)
 
             # cow - cow ou horse
             # horse - boat

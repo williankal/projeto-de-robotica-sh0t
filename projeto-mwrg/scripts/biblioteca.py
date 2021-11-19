@@ -5,6 +5,38 @@ from sklearn.linear_model import LinearRegression
 
 # Arquivo com as funcoes utilizadas
 
+def mascara_creeper(cor, img):
+    """
+        Recebe: cor desejada do creeper (escolhida a partir do terminal), imagem em hsv
+        Devolve: máscara segmentando cor do creeper, centro de massa do creeper
+    """
+    hsv = img.copy()
+    cx_creeper = None
+    try:
+        if cor == "blue":
+            mask = segmenta_blue(hsv)
+
+        if cor == "green":
+            mask = segmenta_green(hsv)
+
+        if cor == "orange":
+            mask = segmenta_orange(hsv)
+        
+        # Achando centro de massa do creeper
+        try:
+            M = cv2.moments(mask)
+
+            if M['m00'] > 0:
+                cx_creeper = int(M['m10']/M['m00'])
+
+        except:
+            pass    
+
+        return mask,cx_creeper        
+        
+    except: 
+        pass
+
 def segmenta_blue(img):
     """
     Utiliza função inRange do cv2 para segmentar imagem HSV e obter uma máscara
@@ -71,33 +103,38 @@ def encontra_angulo_com_vertical(mascara):
     para encontrar o angulo que a linha está fazendo com a vertical para usar esse ângulo no controle proporcional derivativo
     """
     angulo = 0
-    # Obtém contornos
-    contornos, _ = cv2.findContours(mascara, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    lista_centros_x_contornos = []
-    lista_centros_y_contornos = []
-    
-    for c in contornos:
-        M_angulo = cv2.moments(c)
-        # Obtém centros em x e em y dos contornos
-        lista_centros_x_contornos.append(encontra_centro_x(M_angulo))
-        lista_centros_y_contornos.append(encontra_centro_y(M_angulo))
-    
-    if lista_centros_x_contornos:
-        # Transforma em array
-        array_centros_x_contornos = np.array(lista_centros_x_contornos)
-        array_centros_y_contornos = np.array(lista_centros_y_contornos)
 
-        # Preparando dados dos centros dos contornos coletados
-        # para utilizar um modelo de regressão linear
-        yr = array_centros_y_contornos.reshape(-1,1)
-        xr = array_centros_x_contornos.reshape(-1)
+    try:
 
-        reg = LinearRegression()
-        reg.fit(yr,xr)
-    
-        # Pega o ângulo com a vertical para usar no controle proporcional diferencial
-        coef_angular = reg.coef_
-        angulo = math.atan(coef_angular)
+        # Obtém contornos
+        contornos, _ = cv2.findContours(mascara, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        lista_centros_x_contornos = []
+        lista_centros_y_contornos = []
+        
+        for c in contornos:
+            M_angulo = cv2.moments(c)
+            # Obtém centros em x e em y dos contornos
+            lista_centros_x_contornos.append(encontra_centro_x(M_angulo))
+            lista_centros_y_contornos.append(encontra_centro_y(M_angulo))
+        
+        if lista_centros_x_contornos:
+            # Transforma em array
+            array_centros_x_contornos = np.array(lista_centros_x_contornos)
+            array_centros_y_contornos = np.array(lista_centros_y_contornos)
+
+            # Preparando dados dos centros dos contornos coletados
+            # para utilizar um modelo de regressão linear
+            yr = array_centros_y_contornos.reshape(-1,1)
+            xr = array_centros_x_contornos.reshape(-1)
+
+            reg = LinearRegression()
+            reg.fit(yr,xr)
+        
+            # Pega o ângulo com a vertical para usar no controle proporcional diferencial
+            coef_angular = reg.coef_
+            angulo = math.atan(coef_angular)
+    except:
+        pass
     
     return angulo
 
