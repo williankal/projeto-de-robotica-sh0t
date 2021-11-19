@@ -10,6 +10,7 @@ from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Float64, Int16
 from tf import transformations
+import biblioteca
 
 # Dados de Odometria
 x = -1
@@ -70,7 +71,7 @@ class MaquinaDeEstados:
         self.cx_creeper_subscriber = rospy.Subscriber('/cx_creeper', String, self.atualiza_cx_creeper)
         self.cx_creeper = None # posição em x do creeper
 
-        self.angulo_linha_amarela_subscriber = rospy.Subscriber('/angulo_linha_amarelo', String, self.atualiza_angulo)
+        self.angulo_linha_amarela_subscriber = rospy.Subscriber('/angulo_linha_amarela', String, self.atualiza_angulo)
         self.angulo_linha_amarela = 0
 
         self.id_creeper_subscriber = rospy.Subscriber('/id_creeper', Int16, self.atualiza_id_creeper)
@@ -160,14 +161,11 @@ class MaquinaDeEstados:
         """
 
         estado = "SEGUE RETA"        
-        # Implementacao de controle proporcional diferencial
-        Kp = 1/100
-        Kd = 1/1000
+        # Usando controle proporcional diferencial
         psi = self.angulo_linha_amarela
-        #print("Psi:{}".format(psi))
+        ye = self.dif
         self.twist.linear.x = 0.7
-        self.twist.angular.z = - Kp*(self.dif + (Kd*(- math.sin(psi))))
-        
+        self.twist.angular.z = biblioteca.controle_proporcional_diferencial(ye, psi)
         
         #publica velocidade
         self.cmd_vel_pub.publish(self.twist)
