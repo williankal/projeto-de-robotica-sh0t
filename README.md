@@ -9,7 +9,6 @@ Nome dos integrantes:
 * Renato Laffranchi Falcão
 * Gabriel Hideki Stanzani Onishi
 
-## Conceito esperado: C+
 
 # Especiais realizados:
     - Uso de classes e objetos Python em todos os arquivos criados para o projeto
